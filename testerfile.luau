@@ -170,43 +170,62 @@ local UniversalSection = UniversalTab:NewSection("Universal 🎯")
 local PrisonTab = Window:NewTab("Prison Life ⛓️‍💥")
 local PrisonSection = PrisonTab:NewSection("Prison Life ⛓️‍💥")
 
-local typeoftestoption
+local DesSimTab = Window:NewTab("Destruction Sim 💥")
+local DesSimSection = DesSimTab:NewSection("Destruction Sim 💥")
+
+local RivalsTab = Window:NewTab("Rivals ⚔️")
+local RivalsSection = RivalsTab:NewSection("Rivals ⚔️")
+
+local TestOption
 HomeSection:NewLabel("Welcome, "..LocalPlayer.Name.."!")
 HomeSection:NewLabel(GetGameName())
 HomeSection:NewLabel("Executor: "..GetExecutor())
 
 HomeSection:NewButton("Join discord", "rawr", function()
 	SaveConfig()
-	if hassetclipboard then
-		setclipboard("dsc.gg/moonexec")
+	if hassetclipboard and hashttp_request then
+		setclipboard("dsc.gg/impulserbx")
+		http_request({
+			Url = 'http://127.0.0.1:6463/rpc?v=1',
+			Method = 'POST',
+			Headers = {
+				['Content-Type'] = 'application/json',
+				Origin = 'https://discord.com'
+			},
+			Body = HttpService:JSONEncode({
+				cmd = 'INVITE_BROWSER',
+				nonce = HttpService:GenerateGUID(false),
+				args = {code = 'z8fxkenC4P'}
+			})
+		})
 		Notify("Copied to clipboard. Paste in browser!")
 	else
-		Notify("dsc.gg/moonexec")
+		Notify("dsc.gg/impulserbx")
 	end
 end)
 
-HomeSection:NewDropdown("Type of test", "rawr", {"Normal UNC Test", "Deep UNC Test", "SUNC Test", "Deep Vulnerability Test", "MoreUNC Test"}, function(currentOption)
-	typeoftestoption = currentOption
+HomeSection:NewDropdown("Type of test", "Choose types of exploit tests", {"Normal UNC Test", "Deep UNC Test", "SUNC Test", "Deep Vulnerability Test", "MoreUNC Test"}, function(currentOption)
+	TestOption = currentOption
 end)
 
-HomeSection:NewButton("Run Executor Test", "rawr", function()
+HomeSection:NewButton("Run Executor Test", "Run a exploit test", function()
 	SaveConfig()
-	if typeoftestoption == "Normal UNC Test" then
+	if TestOption == "Normal UNC Test" then
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/unctestuniversal.lua"))() -- tests 83 functions
-	elseif typeoftestoption == "Deep UNC Test" then
+	elseif TestOption == "Deep UNC Test" then
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/DeepUNCTest.lua"))() -- tests 248 functions
-	elseif typeoftestoption == "SUNC Test" then
+	elseif TestOption == "SUNC Test" then
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/suncuniversal.lua"))() -- tests 105ish functions
-	elseif typeoftestoption == "Deep Vulnerability Test" then
+	elseif TestOption == "Deep Vulnerability Test" then
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/DeepVulnerabilityTest.lua"))()
-	elseif typeoftestoption == "MoreUNC Test" then
+	elseif TestOption == "MoreUNC Test" then
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/FixedMoreUNC"))()
 	else
 		Notify("Pick a type of test to run.")
 	end
 end)
 
-HomeSection:NewButton("Rejoin Current Server", "rawr", function()
+HomeSection:NewButton("Rejoin Current Server", "Rejoin your current server", function()
 	local PlaceId = game.PlaceId
 	local JobId = game.JobId
 	SaveConfig()
@@ -227,12 +246,115 @@ UniversalSection:NewSlider("JumpPower", "Adjusts your humanoid jump power", 545,
 	game.Players.LocalPlayer.Character.Humanoid.JumpPower = s
 end)
 
+local flySpeed = 5
+
+UniversalSection:NewSlider("Fly Speed", "Adjust fly speed", 150, 1, function(s)
+	SaveConfig()
+	flySpeed = s
+end)
+
+PrisonSection:NewButton("Toggle Fly (E)", "Fly with WASD and E toggle", function()
+	SaveConfig()
+	task.spawn(function()
+		repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+
+		local plr = game.Players.LocalPlayer
+		local char = plr.Character
+		local torso = char:FindFirstChild("HumanoidRootPart")
+		local mouse = plr:GetMouse()
+		local flying = false
+		local ctrl = {f = 0, b = 0, l = 0, r = 0}
+		local lastctrl = {f = 0, b = 0, l = 0, r = 0}
+		local speed = 0
+
+		function Fly()
+			local bg = Instance.new("BodyGyro", torso)
+			bg.P = 9e4
+			bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+			bg.cframe = torso.CFrame
+
+			local bv = Instance.new("BodyVelocity", torso)
+			bv.velocity = Vector3.new(0, 0.1, 0)
+			bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+			repeat task.wait()
+				plr.Character.Humanoid.PlatformStand = true
+				if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+					speed += 0.5 + (speed / flySpeed)
+					if speed > flySpeed then speed = flySpeed end
+				elseif speed ~= 0 then
+					speed -= 1
+					if speed < 0 then speed = 0 end
+				end
+
+				if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+					bv.velocity = ((workspace.CurrentCamera.CFrame.LookVector * (ctrl.f + ctrl.b)) + ((workspace.CurrentCamera.CFrame * CFrame.new(ctrl.l + ctrl.r, (ctrl.f + ctrl.b) * 0.2, 0)).Position - workspace.CurrentCamera.CFrame.Position)) * speed
+					lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
+				elseif speed ~= 0 then
+					bv.velocity = ((workspace.CurrentCamera.CFrame.LookVector * (lastctrl.f + lastctrl.b)) + ((workspace.CurrentCamera.CFrame * CFrame.new(lastctrl.l + lastctrl.r, (lastctrl.f + lastctrl.b) * 0.2, 0)).Position - workspace.CurrentCamera.CFrame.Position)) * speed
+				else
+					bv.velocity = Vector3.new(0, 0.1, 0)
+				end
+
+				bg.CFrame = workspace.CurrentCamera.CFrame * CFrame.Angles(-math.rad((ctrl.f + ctrl.b) * 50 * speed / flySpeed), 0, 0)
+			until not flying
+
+			ctrl, lastctrl = {f = 0, b = 0, l = 0, r = 0}, {f = 0, b = 0, l = 0, r = 0}
+			speed = 0
+			bg:Destroy()
+			bv:Destroy()
+			plr.Character.Humanoid.PlatformStand = false
+		end
+
+		mouse.KeyDown:Connect(function(key)
+			if key:lower() == "e" then
+				flying = not flying
+				if flying then Fly() end
+			elseif key:lower() == "w" then ctrl.f = 1
+			elseif key:lower() == "s" then ctrl.b = -1
+			elseif key:lower() == "a" then ctrl.l = -1
+			elseif key:lower() == "d" then ctrl.r = 1 end
+		end)
+
+		mouse.KeyUp:Connect(function(key)
+			if key:lower() == "w" then ctrl.f = 0
+			elseif key:lower() == "s" then ctrl.b = 0
+			elseif key:lower() == "a" then ctrl.l = 0
+			elseif key:lower() == "d" then ctrl.r = 0 end
+		end)
+	end)
+end)
+
 UniversalSection:NewButton("ESP", "Allows you to view all users behind objects", function()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/ReworkedESP"))()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/ESP.luau"))()
 end)
 
 UniversalSection:NewButton("Jerk", "Loads a script that u can do sus stuff", function()
-	loadstring(game:HttpGet("https://pastebin.com/raw/FWwdST5Y"))()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/sus.luau"))()
+end)
+
+UniversalSection:NewButton("Clear Chat", "Clears chat for everyone", function()
+	SaveConfig()
+	if game:GetService("TextChatService").ChatVersion == Enum.ChatVersion.TextChatService then
+		game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync("hi\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\rCleared Chat.")
+	else
+		Notify("Chat is not supported. Only use on new rbx chat!")
+	end
+end)
+
+UniversalSection:NewButton("Infinite Yield", "Executes inf yield", function()
+	SaveConfig()
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/infiniteyield.luau"))()
+	Notify("Executed Infinite Yield")
+end)
+
+local MessageToBypass = ""
+UniversalSection:NewTextBox("Message to bypass", "Chat bypass", function(txt)
+	MessageToBypass = txt
+end)
+
+UniversalSection:NewButton("Send Bypassed Message", "Works on both chat versions", function()
+	SendBypassedMessage(MessageToBypass)
 end)
 
 --// Kill Aura Toggle
@@ -293,7 +415,7 @@ local teamButtons = {
 	{"Team Criminals", "Bright red"},
 }
 for _, data in ipairs(teamButtons) do
-	PrisonSection:NewButton(data[1], "Switchs to a team", function()
+	PrisonSection:NewButton(data[1], "Switches to a team", function()
 		SaveConfig()
 		workspace.Remote.TeamEvent:FireServer(data[2])
 	end)
@@ -529,6 +651,57 @@ PrisonSection:NewToggle("Godmode", "Prevents death and refreshes on respawn", fu
 		humanoid.BreakJointsOnDeath = true
 	end
 end)
+
+PrisonSection:NewButton("Crash Server", "Crashes the server for everyone", function()
+	SaveConfig()
+
+	local player = game.Players.LocalPlayer
+	local gunName = "Remington 870"
+	local itemPickup = workspace.Prison_ITEMS.giver[gunName].ITEMPICKUP
+	local remote = workspace.Remote.ItemHandler
+
+	-- Request the weapon
+	remote:InvokeServer(itemPickup)
+
+	-- Move gun to character if it's in backpack
+	for _, tool in ipairs(player.Backpack:GetChildren()) do
+		if tool.Name == gunName then
+			tool.Parent = player.Character
+		end
+	end
+
+	-- Get tool instance and unequip
+	local gunTool = player.Character:FindFirstChild(gunName)
+	if not gunTool then
+		return warn("Gun not equipped.")
+	end
+
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid:UnequipTools()
+	end
+
+	-- Fire overloaded bullets repeatedly
+	local function fireExploit()
+		local bulletData = {{
+			Hit = workspace.Terrain, -- Dummy target
+			Distance = 100,
+			Cframe = CFrame.new(0, 1, 1),
+			RayObject = Ray.new(Vector3.new(0.1, 0.2, 0.3), Vector3.new(0.3, 0.4, 0.5))
+		}}
+
+		game.ReplicatedStorage.ShootEvent:FireServer(bulletData, gunTool)
+	end
+
+	-- Rapid-fire loop using Stepped for max performance
+	RunService.Stepped:Connect(function()
+		for _ = 1, 5 do -- Adjustable spam count
+			fireExploit()
+		end
+	end)
+end)
+
+
 
 
 local TeleportCheck = false
