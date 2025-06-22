@@ -49,6 +49,15 @@ local function GetExecutor()
 	return executor
 end
 
+local function DetectBaseExploit()
+	local exploit = GetExecutor()
+	if exploit == "Impulse" or exploit == "Light" or exploit == "AbuseX" then
+		hasqueueTeleport = false
+	else
+		--// Else Check For Queue Teleport On Checks Below
+	end
+end
+
 --// Save settings to file
 local function SaveConfig()
 	local data = HttpService:JSONEncode(config)
@@ -210,19 +219,19 @@ HomeSection:NewButton("Rejoin Current Server", "rawr", function()
 	end
 end)
 
-UniversalSection:NewSlider("WalkSpeed", "rawr", 145, 0, function(s)
+UniversalSection:NewSlider("WalkSpeed", "Adjusts your humanoid speed", 145, 0, function(s)
 	game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = s
 end)
 
-UniversalSection:NewSlider("JumpPower", "rawr", 545, 0, function(s)
+UniversalSection:NewSlider("JumpPower", "Adjusts your humanoid jump power", 545, 0, function(s)
 	game.Players.LocalPlayer.Character.Humanoid.JumpPower = s
 end)
 
-UniversalSection:NewButton("ESP", "rawr", function()
+UniversalSection:NewButton("ESP", "Allows you to view all users behind objects", function()
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/MoonScripts/refs/heads/main/ReworkedESP"))()
 end)
 
-UniversalSection:NewButton("Jerk", "rawr", function()
+UniversalSection:NewButton("Jerk", "Loads a script that u can do sus stuff", function()
 	loadstring(game:HttpGet("https://pastebin.com/raw/FWwdST5Y"))()
 end)
 
@@ -284,14 +293,14 @@ local teamButtons = {
 	{"Team Criminals", "Bright red"},
 }
 for _, data in ipairs(teamButtons) do
-	PrisonSection:NewButton(data[1], "rawr", function()
+	PrisonSection:NewButton(data[1], "Switchs to a team", function()
 		SaveConfig()
 		workspace.Remote.TeamEvent:FireServer(data[2])
 	end)
 end
 
 --// Arrest All
-PrisonSection:NewButton("Arrest All", "rawr", function()
+PrisonSection:NewButton("Arrest All", "Arrests all criminals", function()
 	SaveConfig()
 	local plr = game.Players.LocalPlayer
 	local cpos = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart.CFrame
@@ -315,7 +324,7 @@ end)
 
 --// Kill Target
 local eztarget = ""
-PrisonSection:NewTextBox("Target", "rawr", function(txt)
+PrisonSection:NewTextBox("Target", "Target for the below features", function(txt)
 	SaveConfig()
 	eztarget = txt
 end)
@@ -534,4 +543,4 @@ if IsMobile then
 	Notify("Some features may be limited on mobile.") 
 end
 
-Notify("Xor Hub Injected!")
+Notify("Xor Hub injected!")
