@@ -1105,13 +1105,27 @@ if game.PlaceId == 155615604 then
 
 	--// Teleports
 	local teleports = {
-		{"TP inside of prison", "Teleport to inside of prison building", Vector3.new(879,99,2377)},
+		{"TP inside of prison", "Teleport to inside of prison building", Vector3.new(879, 99, 2377)},
 		{"TP to criminal base", "Teleport directly to criminal team base", Vector3.new(-943, 96, 2055)},
-		{"TP to guard area", "Teleport to the armed guard location", Vector3.new(802,99,2270)}
+		{"TP to guard area", "Teleport to the armed guard location", Vector3.new(802, 99, 2270)},
+		{"TP to nex", "Teleport to nexus hallway", Vector3.new(918.77, 100, 2379.07)},
+		{"TP to prison yard", "Teleport to open prison yard area", Vector3.new(791, 98, 2498)},
+		{"TP to gate tower 2", "Teleport to second tower at gate", Vector3.new(505, 125, 2149)},
+		{"TP to bridge", "Teleport to the prison bridge", Vector3.new(54, 33, 1311)},
+		{"TP to top nex", "Teleport to top nexus hallway", Vector3.new(829, 119, 2332)},
+		{"TP to gun range", "Teleport to shooting range zone", Vector3.new(403, 11, 1173)},
+		{"TP to gas station", "Teleport to city gas station", Vector3.new(-518, 54, 1655)},
+		{"TP to back cafe", "Teleport behind cafeteria zone", Vector3.new(918, 100, 2223)},
+		{"TP to main gate", "Teleport to front prison gate", Vector3.new(506, 118, 2251)},
+		{"TP to gate tower", "Teleport to main gate tower", Vector3.new(502, 126, 2306)},
+		{"TP to cafeteria", "Teleport to the inmate cafeteria", Vector3.new(877, 100, 2256)},
+		{"TP to lunchroom", "Teleport to inmate lunchroom table", Vector3.new(905, 100, 2226)},
+		{"TP to armory", "Teleport to armed gear room", Vector3.new(789, 100, 2260)},
+		{"TP to tower", "Teleport to outer perimeter tower", Vector3.new(822, 131, 2588)},
+		{"TP to sewers", "Teleport to underground sewer system", Vector3.new(916, 79, 2311)}
 	}
 	for _, t in ipairs(teleports) do
 		PrisonSection:NewButton(t[1], t[2], function()
-			 
 			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(t[3])
 		end)
 	end
