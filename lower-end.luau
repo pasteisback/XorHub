@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
@@ -59,33 +60,78 @@ local function DetectBaseExploit()
 end
 
 --// Unicode Chat Bypass System
-local function SendBypassedMessage(originalText)
-	local bypassText = originalText ~= "" and originalText or "Xor Hub."
+local function getChatService()
+	local textChatService = game:FindFirstChildOfClass("TextChatService")
 
-	-- Upper and lower Unicode mapping tables
-	local upperMap = {
-		A="Ạ", B="Ḅ", C="C", D="Ḍ", E="Ẹ", F="F", G="Ģ", H="Ḥ", I="Ị", J="J",
-		K="Ḳ", L="Ḷ", M="Ṃ", N="Ṇ", O="Ọ", P="Р", Q="Q", R="Ṛ", S="Ṣ", T="Ṭ",
-		U="Ụ", V="Ṿ", W="Ẉ", X="Ẋ", Y="Ỵ", Z="Ẓ"
-	}
-	local lowerMap = {
-		a="ạ", b="ḅ", c="c", d="ḍ", e="ẹ", f="f", g="ɡ", h="ḥ", i="ị", j="ј",
-		k="ḳ", l="ḷ", m="ṃ", n="ṇ", o="ọ", p="р", q="q", r="ṛ", s="ṣ", t="ṭ",
-		u="ụ", v="ṿ", w="ẉ", x="ẋ", y="ỵ", z="ẓ", ["|"] = "\r"
-	}
+	if textChatService then
+		local success, result = pcall(function()
+			return textChatService.ChatInputBarConfiguration
+		end)
 
-	-- Convert to fancy Unicode
-	local converted = ""
-	for char in bypassText:gmatch(".") do
-		local mapped = upperMap[char] or lowerMap[char] or char
-		converted = converted .. mapped .. "͎"
+		if success and result then
+			return "TextChatService"
+		end
 	end
 
-	-- Send message
-	if TextChatService.ChatInputBarConfiguration.TargetTextChannel then
-		TextChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(converted)
-	else
-		ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(converted, "All")
+	return "LegacyChat"
+end
+
+
+-- Chat Bypasser Alphabet Map (optimized)
+local function getChatBypasserLetters()
+	return {
+		A = "🇦", B = "🇧", C = "🇨", D = "🇩", E = "🇪",
+		F = "🇫", G = "🇬", H = "🇭", I = "🇮", J = "🇯",
+		K = "🇰", L = "🇱", M = "🇲", N = "🇳", O = "🇴",
+		P = "🇵", Q = "🇶", R = "🇷", S = "🇸", T = "🇹",
+		U = "🇺", V = "🇻", W = "🇼", X = "🇽", Y = "🇾",
+		Z = "🇿",
+		-- Add lowercase mappings for efficiency
+		a = "🇦", b = "🇧", c = "🇨", d = "🇩", e = "🇪",
+		f = "🇫", g = "🇬", h = "🇭", i = "🇮", j = "🇯",
+		k = "🇰", l = "🇱", m = "🇲", n = "🇳", o = "🇴",
+		p = "🇵", q = "🇶", r = "🇷", s = "🇸", t = "🇹",
+		u = "🇺", v = "🇻", w = "🇼", x = "🇽", y = "🇾",
+		z = "🇿"
+	}
+end
+
+-- Optimized bypass and send message function
+local function SendBypassedMessage(message)
+	local Alphabet = getChatBypasserLetters()
+	local Word = {}
+	local separator = "او" -- Middle Eastern character separator
+
+	-- Pre-allocate table size for better performance
+	for i = 1, #message * 2 do
+		Word[i] = nil
+	end
+
+	local index = 1
+	for i = 1, #message do
+		local char = message:sub(i, i)
+		local replacement = Alphabet[char]
+		Word[index] = replacement or char
+		index = index + 1
+		if i < #message then
+			Word[index] = separator
+			index = index + 1
+		end
+	end
+
+	local bypassed = table.concat(Word)
+
+	-- Send using the appropriate chat system
+	local chatService = getChatService()
+	if chatService == "TextChatService" then
+		local targetChannel = TextChatService.ChatInputBarConfiguration.TargetTextChannel
+		if targetChannel then
+			targetChannel:SendAsync(bypassed)
+		else
+			warn("No target text channel available")
+		end
+	else -- Legacy chat
+		ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest"):FireServer(bypassed, "All")
 	end
 end
 
@@ -644,10 +690,25 @@ if game.PlaceId == 155615604 then
 			end
 		end
 	end)
+	
+	--// Whitelist Users
+	local whitelist = {}
+
+	-- Function to split a string by commas and trim whitespace
+	local function splitCommaString(str)
+		local result = {}
+		for user in string.gmatch(str, '([^,]+)') do
+			table.insert(result, user:match("^%s*(.-)%s*$")) -- trims whitespace
+		end
+		return result
+	end
+
+	PrisonSection:NewTextBox("Whitelist", "Whitelist users (SEPARATE WITH COMMAS)", function(txt)
+		whitelist = splitCommaString(txt)
+	end)
 
 	--// Kill Aura Toggle
 	PrisonSection:NewToggle("Kill Aura", "Automatically attacks players nearby", function(state)
-		 
 		local Events = {
 			TeamEvent = workspace.Remote.TeamEvent,
 			ShootEvent = game:GetService("ReplicatedStorage").ShootEvent,
@@ -661,7 +722,7 @@ if game.PlaceId == 155615604 then
 			while killAuraEnabled do
 				task.wait()
 				for _, target in pairs(game.Players:GetPlayers()) do
-					if target ~= game.Players.LocalPlayer then
+					if target ~= game.Players.LocalPlayer and not table.find(whitelist, target.Name) then
 						meleeRemote:FireServer(target)
 					end
 				end
@@ -780,7 +841,7 @@ if game.PlaceId == 155615604 then
 		if not Criminals then return warn("Criminals team not found!") end
 
 		for _, crim in pairs(Criminals:GetPlayers()) do
-			if crim ~= plr and crim.Character and crim.Character:FindFirstChild("HumanoidRootPart") then
+			if crim ~= plr and crim.Character and crim.Character:FindFirstChild("HumanoidRootPart") and not table.find(whitelist, crim.Name) then
 				for _ = 1, 10 do
 					task.wait()
 					workspace.Remote.arrest:InvokeServer(crim.Character.HumanoidRootPart)
@@ -831,6 +892,7 @@ if game.PlaceId == 155615604 then
 		local target = game.Players:FindFirstChild(eztarget)
 		local savedPos = GetPos()
 		if not target then return warn("Invalid player target:", eztarget) end
+		if table.find(whitelist, target.Name) then return end
 
 		game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
 		kill(target)
@@ -838,8 +900,8 @@ if game.PlaceId == 155615604 then
 	end)
 
 	PrisonSection:NewButton("Arrest Target", "Attempts to arrest your selected target", function()
-		 
 		local target = game.Players:FindFirstChild(eztarget)
+		if table.find(whitelist, target.Name) then return end
 		if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
 			workspace.Remote.arrest:InvokeServer(target.Character.HumanoidRootPart)
 		else
@@ -848,8 +910,8 @@ if game.PlaceId == 155615604 then
 	end)
 
 	PrisonSection:NewButton("TP to target", "Punch nearby enemies instantly using key", function()
-		 
 		local target = game.Players:FindFirstChild(eztarget)
+		if table.find(whitelist, target.Name) then return end
 		if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
 			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
 		else
@@ -976,7 +1038,7 @@ if game.PlaceId == 155615604 then
 			task.spawn(function()
 				while antiTouchEnabled do
 					for _, player in ipairs(Players:GetPlayers()) do
-						if player ~= LocalPlayer and player.Character and LocalPlayer.Character then
+						if player ~= LocalPlayer and player.Character and LocalPlayer.Character  and not table.find(whitelist, player.Name) then
 							local enemyHRP = player.Character:FindFirstChild("HumanoidRootPart")
 							local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
@@ -1063,7 +1125,7 @@ if game.PlaceId == 155615604 then
 				local players = game.Players:GetPlayers()
 				if #players > 0 then
 					local target = players[math.random(1, #players)]
-					if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+					if target.Character and target.Character:FindFirstChild("HumanoidRootPart")  and not table.find(whitelist, target.Name) then
 						local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 						if hrp then
 							hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
