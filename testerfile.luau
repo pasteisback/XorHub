@@ -16,6 +16,7 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
 
 --// Function Checkers
 local hasgetconnections = true
@@ -184,6 +185,11 @@ local NatDisasterSection = NatDisasterTab:NewSection("Natural Disasters 🌪️"
 local SettingsTab = Window:NewTab("Settings ⚙️")
 local SettingsSection = SettingsTab:NewSection("Settings ⚙️")
 
+--// Other Varables
+local RefreshingGodmode = false
+local PrisonLife_ClickKill = false
+local PrisonLife_ClickArrest = false
+
 local TestOption
 HomeSection:NewLabel("Welcome, "..LocalPlayer.Name.."!")
 HomeSection:NewLabel(GetGameName())
@@ -333,6 +339,28 @@ UniversalSection:NewButton("Toggle Fly (E)", "Fly with WASD and E toggle", funct
 	end)
 end)
 
+local AimlockEnabled = false
+local AimSmoothness = 6
+local Aimlock_Target = nil
+local TriggerBotEnabled = false
+local TriggerDelay = 0
+
+UniversalSection:NewToggle("Mouse Aimbot", "Locks mouse to target near crosshair", function(state)
+	AimlockEnabled = state
+end)
+
+UniversalSection:NewSlider("Aim Smoothness", "Lower = faster, higher = slower", 30, 1, function(val)
+	AimSmoothness = val
+end)
+
+UniversalSection:NewToggle("Trigger Bot", "Auto click when aiming at someone", function(state)
+	TriggerBotEnabled = state
+end)
+
+UniversalSection:NewSlider("Trigger Delay (ms)", "Delay before firing", 500, 0, function(val)
+	TriggerDelay = val
+end)
+
 UniversalSection:NewButton("ESP", "Allows you to view all users behind objects", function()
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/ESP.luau"))()
 end)
@@ -366,6 +394,325 @@ UniversalSection:NewButton("Send Bypassed Message", "Works on both chat versions
 end)
 
 if game.PlaceId == 155615604 then
+	--// Functions
+	local function ReturnGun()
+		for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+			if tool:IsA("Tool") and tool:FindFirstChildOfClass("ModuleScript") then
+				return tool
+			end
+		end
+		return nil
+	end
+
+	local function GetPos()
+		return LocalPlayer.Character:FindFirstChild("HumanoidRootPart").CFrame
+	end
+
+	local function MoveTo(pos)
+		pcall(function()
+			local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if typeof(pos):lower() == "position" then pos = CFrame.new(pos) end
+			LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Sit = false
+			for _ = 1, 3 do hrp.CFrame = pos end
+		end)
+	end
+
+	local function MoveToJunk(part)
+		part.CFrame = CFrame.new(0, 5^5, 0)
+	end
+
+	local function GetTeam()
+		return LocalPlayer.TeamColor.Name
+	end
+
+	local function ValidTeam(team)
+		local valid = {"Bright orange", "Bright blue"}
+		if team and typeof(team):lower() == "string" then
+			if table.find(valid, team) then return true end
+			if team == "Really red" then return 1 end
+		end
+		return nil
+	end
+
+	local function MKILL(target, stop, pos)
+		if typeof(target) == "string" then target = Players:FindFirstChild(target) end
+		if not target or target == LocalPlayer then return end
+		if not stop then stop = 1 end
+
+		local tChar, tHum = target.Character, target.Character and target.Character:FindFirstChild("Humanoid")
+		if not tChar or not tHum or tHum.Health < 1 or tChar:FindFirstChildOfClass("ForceField") then return end
+
+		local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+		humanoid.Sit = false
+		pos = pos or GetPos()
+		MoveTo(target.Character.Head.Position)
+		wait(0.2)
+
+		for _ = 1, 10 do
+			task.spawn(function()
+				ReplicatedStorage.meleeEvent:FireServer(target)
+			end)
+		end
+		wait(0.1)
+
+		if tHum.Health > 1 and stop < 3 then
+			MKILL(target, stop + 1, pos)
+		else
+			MoveTo(pos)
+		end
+	end
+
+	local function LastTeam(teamName)
+		task.spawn(function()
+			local pos, camCFrame = GetPos(), Workspace.CurrentCamera.CFrame
+			LocalPlayer.CharacterAdded:Connect(function(char)
+				Workspace.CurrentCamera:GetPropertyChangedSignal("CFrame"):Wait()
+				for _ = 1, 5 do Workspace.CurrentCamera.CFrame = camCFrame end
+				char:WaitForChild("HumanoidRootPart")
+				MoveTo(pos)
+			end)
+
+			local teamType = ValidTeam(teamName)
+			if teamType and teamType ~= 1 then
+				Workspace.Remote.TeamEvent:FireServer(teamName)
+			elseif teamType == 1 then
+				Workspace.Remote.TeamEvent:FireServer("Bright orange")
+				local crimSpawn = Workspace["Criminals Spawn"].SpawnLocation
+				crimSpawn.CanCollide = false
+				crimSpawn.Transparency = 1
+				repeat task.wait() crimSpawn.CFrame = GetPos() until LocalPlayer.Team == game.Teams.Criminals
+				MoveToJunk(crimSpawn)
+			end
+		end)
+	end
+
+	local function GetGunFromTigerAdmin(itemName, skipReturn)
+		local savedPos = GetPos()
+		local item = Workspace.Prison_ITEMS.giver:FindFirstChild(itemName)
+		if item and item:FindFirstChild("ITEMPICKUP") then
+			repeat
+				MoveTo(item.Position)
+				task.spawn(function()
+					Workspace.Remote.ItemHandler:InvokeServer(item)
+				end)
+				wait()
+			until LocalPlayer.Backpack:FindFirstChild(itemName) or LocalPlayer.Character:FindFirstChild(itemName)
+		end
+		if not skipReturn then
+			MoveTo(savedPos)
+		end
+	end
+	
+	local PlayerEvents = {
+		loadchar = function()
+			if LocalPlayer.Team == game.Teams.Inmates then
+				local ohString1 = "Bright orange"
+				workspace.Remote.TeamEvent:FireServer(ohString1)
+			elseif LocalPlayer.Team == game.Teams.Guards then
+				local ohString1 = "Bright blue"
+				workspace.Remote.TeamEvent:FireServer(ohString1)
+			elseif LocalPlayer.Team == game.Teams.Criminals then
+				workspace.Remote.TeamEvent:FireServer("Bright orange")
+				wait(0.3)
+				local crimpad = workspace["Criminals Spawn"].SpawnLocation
+				crimpad.CanCollide = false
+				crimpad.Transparency = 1
+				repeat task.wait() crimpad.CFrame = GetPos()() until LocalPlayer.Team == game.Teams.Criminals
+				MoveToJunk(crimpad)
+			end
+		end,
+	}
+
+	local function ChangeTeam(team)
+		if team == game.Teams.Criminals then
+			local pos = GetPos()
+			local crimSpawn = Workspace["Criminals Spawn"].SpawnLocation
+			crimSpawn.CanCollide = false
+			crimSpawn.Transparency = 1
+			repeat task.wait() crimSpawn.CFrame = pos until LocalPlayer.Team == game.Teams.Criminals
+			MoveTo(pos)
+			MoveToJunk(crimSpawn)
+			return
+		end
+
+		local camCFrame = Workspace.CurrentCamera.CFrame
+		LocalPlayer.CharacterAdded:Connect(function(char)
+			Workspace.CurrentCamera:GetPropertyChangedSignal("CFrame"):Wait()
+			for _ = 1, 5 do Workspace.CurrentCamera.CFrame = camCFrame end
+			char:WaitForChild("HumanoidRootPart")
+			MoveTo(GetPos())
+		end)
+		Workspace.Remote.TeamEvent:FireServer(team.TeamColor.Name)
+	end
+	
+	function refresh(Pos)
+		if not Pos then
+			Pos = GetPos()
+		end
+		RefreshingGodmode = true
+		local Goto = Pos or GetPos()
+		local Connections = {}
+		local Cam = workspace.CurrentCamera.CFrame
+		Connections[1] = LocalPlayer.CharacterAdded:Connect(function(charnew)
+			pcall(function()
+				task.spawn(function()
+					workspace.CurrentCamera:GetPropertyChangedSignal("CFrame"):Wait()
+					for i =1,5 do
+						workspace.CurrentCamera.CFrame = Cam
+					end
+				end)
+				repeat task.wait() until charnew and charnew:FindFirstChild("HumanoidRootPart")
+				MoveTo(Goto)
+				task.spawn(function()
+					wait(.05)
+					MoveTo(Goto)
+					RefreshingGodmode = false
+				end)
+				Connections[1]:Disconnect()
+			end)
+		end)
+		PlayerEvents.loadchar()
+		print("Refreshed")
+		return
+	end
+
+	local function KillAll(targetTeam)
+		local originalTeam = GetTeam()
+		local savedPos = GetPos()
+		if not targetTeam then ChangeTeam(game.Teams.Inmates) end
+		GetGunFromTigerAdmin("M9")
+
+		repeat task.wait() until ReturnGun()
+		local gun = ReturnGun()
+		local shootPayload = {}
+
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and (not targetTeam or plr.Team == targetTeam) then
+				for _ = 1, 10 do
+					table.insert(shootPayload, {
+						RayObject = Ray.new(Vector3.new(), Vector3.new()),
+						Distance = 0.1,
+						Cframe = CFrame.new(),
+						Hit = plr.Character:WaitForChild("Head")
+					})
+				end
+			end
+		end
+		ReplicatedStorage.ShootEvent:FireServer(shootPayload, gun)
+		wait(0.1)
+		LastTeam(originalTeam)
+		wait(0.4)
+		MoveTo(savedPos)
+	end
+
+	local function kill(player)
+		if typeof(player) == "string" then player = Players:FindFirstChild(player) end
+		if not player or player == LocalPlayer then return Notify("Can't kill yourself????") end
+		local gun = ReturnGun()
+
+		if gun and LocalPlayer.Team ~= player.Team then
+			local shootPayload = {}
+			for _ = 1, 15 do
+				table.insert(shootPayload, {
+					RayObject = Ray.new(Vector3.new(), Vector3.new()),
+					Distance = 0.1,
+					Cframe = CFrame.new(),
+					Hit = player.Character:WaitForChild("Head")
+				})
+			end
+			ReplicatedStorage.ShootEvent:FireServer(shootPayload, gun)
+		else
+			MKILL(player)
+		end
+
+		wait(0.3)
+		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		Notify(hum and hum.Health < 1 and "Player has been killed" or "Failed to kill player")
+	end
+	
+	function keycard()
+		if LocalPlayer.Character:FindFirstChild("Key card") or LocalPlayer.Backpack:FindFirstChild("Key card") then
+			return Notify("You already have a keycard!")
+		end
+		if game:GetService("Workspace")["Prison_ITEMS"].single:FindFirstChild("Key card") then
+			local a = GetPos()
+			local Key = workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP
+			MoveTo(CFrame.new(workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP.Position))
+			wait()
+			repeat wait(.1)
+				local a =pcall(function()
+					local Key = workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP
+					game.Workspace.Remote["ItemHandler"]:InvokeServer(Key)
+					MoveTo(CFrame.new(workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP.Position+Vector3.new(0,3,0)))
+				end)
+				if not a then
+					break
+				end
+			until LocalPlayer.Backpack:FindFirstChild("Key card")
+			wait()
+			MoveTo(a)
+			return
+		end
+		local a,b= GetPos(),LocalPlayer.TeamColor.Name
+		local HadOn = RefreshingGodmode
+		if HadOn then
+			RefreshingGodmode = false
+		end
+		ChangeTeam(game.Teams.Guards)
+		repeat wait(.2)
+			pcall(function()
+				LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Health =0
+				wait(.2)
+				ChangeTeam(game.Teams.Guards)
+			end)
+		until game:GetService("Workspace")["Prison_ITEMS"].single:FindFirstChild("Key card")
+		if HadOn then
+			RefreshingGodmode = true
+		end
+		LastTeam(b)
+		wait(.1)
+		MoveTo(CFrame.new(workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP.Position))
+		wait()
+		repeat wait(.1)
+			local a =pcall(function()
+				local Key = workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP
+				game.Workspace.Remote["ItemHandler"]:InvokeServer(Key)
+				MoveTo(CFrame.new(workspace.Prison_ITEMS.single["Key card"].ITEMPICKUP.Position+Vector3.new(0,3,0)))
+			end)
+			if not a then
+				break
+			end
+		until LocalPlayer.Backpack:FindFirstChild("Key card")
+		wait()
+		MoveTo(a)
+
+	end
+	
+	LocalPlayer:GetMouse().Button1Up:Connect(function()
+		local Target = LocalPlayer:GetMouse().Target
+		if PrisonLife_ClickArrest or PrisonLife_ClickKill then
+			if Target and Target.Parent and Target.Parent:FindFirstChildOfClass("Humanoid") and game:GetService("Players"):FindFirstChild(Target.Parent.Name) or game:GetService("Players"):FindFirstChild(Target.Parent.Parent.Name) then
+				local TargetModelPlr = game:GetService("Players"):FindFirstChild(Target.Parent.Name) or game:GetService("Players"):FindFirstChild(Target.Parent.Parent.Name)
+				if PrisonLife_ClickArrest then
+					if TargetModelPlr.Team ~= game:GetService("Teams").Guards then
+						local ohInstance1 = Target
+						local savedPos1 = GetPos()
+						game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = ohInstance1.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+						workspace.Remote.arrest:InvokeServer(ohInstance1)
+						game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = savedPos1
+					end
+				end
+				if PrisonLife_ClickKill then
+					local savedPos2 = GetPos()
+					game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = TargetModelPlr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+					kill(TargetModelPlr)
+					game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = savedPos2
+				end
+			end
+		end
+	end)
+	
 	--// Kill Aura Toggle
 	PrisonSection:NewToggle("Kill Aura", "Automatically attacks players nearby", function(state)
 		SaveConfig()
@@ -414,6 +761,18 @@ if game.PlaceId == 155615604 then
 				Notify("Your executor does not support getconnections. This feature will not work.")
 			end
 		end
+	end)
+	
+	--// Click kill
+	PrisonSection:NewToggle("Click Kill", "Click = Kill", function(state)
+		SaveConfig()
+		PrisonLife_ClickKill = state
+	end)
+	
+	--// Click arrest
+	PrisonSection:NewToggle("Click Arrest", "Click = Arrest", function(state)
+		SaveConfig()
+		PrisonLife_ClickArrest = state
 	end)
 
 	--// Team Switch Buttons
@@ -516,6 +875,12 @@ if game.PlaceId == 155615604 then
 		end
 		Notify("Arrested everyone.")
 	end)
+	
+	--// Get keycard
+	PrisonSection:NewButton("Get keycard", "Kills cop and grabs keycard", function()
+		SaveConfig()
+		keycard()
+	end)
 
 	--// Kill Target
 	local eztarget = ""
@@ -527,14 +892,12 @@ if game.PlaceId == 155615604 then
 	PrisonSection:NewButton("Kill Target", "Damages selected target using melee hits", function()
 		SaveConfig()
 		local target = game.Players:FindFirstChild(eztarget)
+		local savedPos = GetPos()
 		if not target then return warn("Invalid player target:", eztarget) end
-
-		local meleeRemote = game.ReplicatedStorage["meleeEvent"]
-		local startTime = os.clock()
-		while os.clock() - startTime < 3 do
-			meleeRemote:FireServer(target)
-			wait(0.1)
-		end
+		
+		game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+		kill(target)
+		game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = savedPos
 	end)
 
 	PrisonSection:NewButton("Arrest Target", "Attempts to arrest your selected target", function()
@@ -654,6 +1017,102 @@ if game.PlaceId == 155615604 then
 			end
 		end
 	end)
+	
+	PrisonSection:NewButton("Kill all", "Kills all users", function()
+		SaveConfig()
+		KillAll(game.Teams.Inmates)
+		KillAll(game.Teams.Guards)
+		KillAll(game.Teams.Criminals)
+		KillAll("Inmates")
+		KillAll("Guards")
+		KillAll("Criminals")
+		KillAll()
+	end)
+	
+	--// Anti-Touch
+	local antiTouchEnabled = false
+
+	PrisonSection:NewToggle("Anti-Touch", "Kills users who touch your character", function(state)
+		SaveConfig()
+		antiTouchEnabled = state
+
+		if state then
+			task.spawn(function()
+				while antiTouchEnabled do
+					for _, player in ipairs(Players:GetPlayers()) do
+						if player ~= LocalPlayer and player.Character and LocalPlayer.Character then
+							local enemyHRP = player.Character:FindFirstChild("HumanoidRootPart")
+							local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+							if enemyHRP and myHRP then
+								local dist = (myHRP.Position - enemyHRP.Position).Magnitude
+								if dist < 3.5 then
+									for i = 1, 13 do
+										task.spawn(function()
+											ReplicatedStorage:WaitForChild("meleeEvent"):FireServer(player)
+										end)
+									end
+								end
+							end
+						end
+					end
+					task.wait(0.2) -- adjust to control how often it checks
+				end
+			end)
+		end
+	end)
+	
+	local antiShieldEnabled = false
+
+	PrisonSection:NewToggle("Anti-Shield", "You can shoot through shields", function(state)
+		SaveConfig()
+		antiShieldEnabled = state
+
+		if state then
+			task.spawn(function()
+				while antiShieldEnabled do
+					for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+						if v and v.Character and v:FindFirstChild("Torso") and v:FindFirstChild("Torso"):FindFirstChild("ShieldFolder") then
+							v.Torso:FindFirstChild("ShieldFolder"):Destroy()
+						end
+					end
+					task.wait(0.2) -- adjust to control how often it checks
+				end
+			end)
+		end
+	end)
+
+	PrisonSection:NewButton("Range Kill-All", "Kills users who are in the map", function()
+		SaveConfig()
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player ~= LocalPlayer and player.Character and LocalPlayer.Character then
+				local enemyHRP = player.Character:FindFirstChild("HumanoidRootPart")
+				local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+				if enemyHRP and myHRP then
+					local dist = (myHRP.Position - enemyHRP.Position).Magnitude
+					if dist < 50 then
+						for i = 1, 13 do
+							task.spawn(function()
+								ReplicatedStorage:WaitForChild("meleeEvent"):FireServer(player)
+								local players = game.Players:GetPlayers()
+								if #players > 0 then
+									local target = players[math.random(1, #players)]
+									if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+										local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+										if hrp then
+											hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+											ReplicatedStorage:WaitForChild("meleeEvent"):FireServer(target)
+										end
+									end
+								end
+							end)
+						end
+					end
+				end
+			end
+		end
+	end)
 
 	--// BTools
 	PrisonSection:NewButton("Btools", "Gives classic building tools", function()
@@ -682,7 +1141,6 @@ if game.PlaceId == 155615604 then
 	--// Loop Kill All Toggle
 	PrisonSection:NewToggle("Loop Kill All", "Teleports to and attacks players", function(state)
 		SaveConfig()
-		Notify("Not killing? Kill Aura is required to be on.")
 		task.spawn(function()
 			while state do
 				task.wait(1)
@@ -693,6 +1151,7 @@ if game.PlaceId == 155615604 then
 						local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 						if hrp then
 							hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+							kill(target)
 						end
 					end
 				end
@@ -703,26 +1162,17 @@ if game.PlaceId == 155615604 then
 	--// Godmode
 	PrisonSection:NewToggle("Godmode", "Prevents death and refreshes on respawn", function(state)
 		SaveConfig()
-		local player = game.Players.LocalPlayer
-		local char = player.Character or player.CharacterAdded:Wait()
-		local humanoid = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
-
-		if state then
-			humanoid.BreakJointsOnDeath = false
-
-			humanoid.Died:Connect(function()
-				if not state then return end
-				local pos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.CFrame
-				player:LoadCharacter()
-				task.defer(function()
-					if pos and player.Character:FindFirstChild("HumanoidRootPart") then
-						player.Character:WaitForChild("HumanoidRootPart").CFrame = pos
-					end
+		task.spawn(function()
+			while state do
+				local char = LocalPlayer.Character
+				repeat task.wait() until char and char:FindFirstChildOfClass("Humanoid")
+				char:FindFirstChildOfClass("Humanoid").BreakJointsOnDeath = false
+				char:FindFirstChildOfClass("Humanoid").Died:Connect(function()
+					refresh()
 				end)
-			end)
-		else
-			humanoid.BreakJointsOnDeath = true
-		end
+				task.wait(0.2)
+			end
+		end)
 	end)
 
 	PrisonSection:NewButton("Crash Server", "Crashes the server for everyone", function()
@@ -774,7 +1224,7 @@ if game.PlaceId == 155615604 then
 		end)
 	end)
 else
-	PrisonSection:NewLabel("Join Destruction Simulator to load features")
+	PrisonSection:NewLabel("Join Prison Life to load features")
 	PrisonSection:NewButton("Join Game", "Joins the required game", function()
 		SaveConfig()
 		local TeleportService = game:GetService("TeleportService")
@@ -970,113 +1420,90 @@ else
 	end)
 end
 
-if game.PlaceId == 189707 then -- natural disaster survival (og ass game)
+-- Exploit-heavy optimized version with full physics and reduced lag
+if game.PlaceId == 189707 then
 	local ringPartsEnabled = false
 	local trackedParts = {}
+	local MAX_PARTS = 200
 
-	--// Attachments
+	-- Anchor setup
 	local baseFolder = Instance.new("Folder", Workspace)
+	baseFolder.Name = "RingAnchorFolder"
+
 	local anchorPart = Instance.new("Part")
 	anchorPart.Name = "Anchor"
 	anchorPart.Anchored = true
 	anchorPart.CanCollide = false
 	anchorPart.Transparency = 1
+	anchorPart.Size = Vector3.new(1, 1, 1)
 	anchorPart.Parent = baseFolder
 
 	local anchorAttachment = Instance.new("Attachment", anchorPart)
 
-	--// Network Setup
-	if not getgenv().Network then
-		getgenv().Network = {
-			BaseParts = {},
-			Velocity = Vector3.new(14.46, 14.46, 14.46)
-		}
+	-- Setup physics override
+	Network = Network or {
+		BaseParts = {},
+		Velocity = Vector3.new(14.46, 14.46, 14.46)
+	}
 
-		function Network.RetainPart(part)
-			if typeof(part) == "Instance" and part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
-				table.insert(Network.BaseParts, part)
-				part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-				part.CanCollide = false
-			end
-		end
-
-		RunService.Heartbeat:Connect(function()
-			sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
-			for _, part in ipairs(Network.BaseParts) do
-				if part:IsDescendantOf(Workspace) then
-					part.Velocity = Network.Velocity
-				end
-			end
-		end)
-	end
-
-	--// Force Part
-	local function ForcePart(part)
-		if part:IsA("Part") and not part.Anchored and not part:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and part.Name ~= "Handle" then
-			for _, child in ipairs(part:GetChildren()) do
-				if child:IsA("BodyMover") or child:IsA("Torque") or child:IsA("AlignPosition") then
-					child:Destroy()
-				end
-			end
-			part.CanCollide = false
-
-			local attachment = Instance.new("Attachment", part)
-			local torque = Instance.new("Torque", part)
-			torque.Torque = Vector3.new(100000, 100000, 100000)
-			torque.Attachment0 = attachment
-
-			local alignPos = Instance.new("AlignPosition", part)
-			alignPos.Attachment0 = attachment
-			alignPos.Attachment1 = anchorAttachment
-			alignPos.MaxForce = math.huge
-			alignPos.MaxVelocity = math.huge
-			alignPos.Responsiveness = 200
-		end
-	end
-
-	--// Retain Part
 	local function RetainPart(part)
 		if part:IsA("BasePart") and not part.Anchored and part:IsDescendantOf(Workspace) then
-			if part:IsDescendantOf(LocalPlayer.Character) then return false end
-			part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-			part.CanCollide = false
-			return true
+			if not part:IsDescendantOf(LocalPlayer.Character) then
+				part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+				part.CanCollide = false
+				return true
+			end
 		end
 		return false
 	end
 
-	--// Track Parts
-	local function addPart(part)
+	local function TrackPart(part)
 		if RetainPart(part) and not table.find(trackedParts, part) then
 			table.insert(trackedParts, part)
+			table.insert(Network.BaseParts, part)
 		end
 	end
 
-	local function removePart(part)
+	local function UntrackPart(part)
 		local index = table.find(trackedParts, part)
-		if index then
-			table.remove(trackedParts, index)
-		end
+		if index then table.remove(trackedParts, index) end
+
+		local netIndex = table.find(Network.BaseParts, part)
+		if netIndex then table.remove(Network.BaseParts, netIndex) end
 	end
 
-	--// Populate trackedParts
+	-- Initial scan
 	for _, part in ipairs(Workspace:GetDescendants()) do
-		addPart(part)
+		if #trackedParts >= MAX_PARTS then break end
+		TrackPart(part)
 	end
-	Workspace.DescendantAdded:Connect(addPart)
-	Workspace.DescendantRemoving:Connect(removePart)
 
-	--// Ring Effect Loop
+	Workspace.DescendantAdded:Connect(function(part)
+		if #trackedParts >= MAX_PARTS then return end
+		TrackPart(part)
+	end)
+
+	Workspace.DescendantRemoving:Connect(UntrackPart)
+
+	-- Full physics override loop
 	RunService.Heartbeat:Connect(function()
-		if not ringPartsEnabled then return end
+		if ringPartsEnabled then
+			pcall(function()
+				sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+			end)
 
-		local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if not root then return end
+			local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if not root then return end
 
-		local center = root.Position
+			local center = root.Position
 
-		for _, part in ipairs(trackedParts) do
-			if part:IsA("BasePart") and part.Parent and not part.Anchored then
+			for i = #trackedParts, 1, -1 do
+				local part = trackedParts[i]
+				if not part or not part:IsDescendantOf(Workspace) then
+					table.remove(trackedParts, i)
+					continue
+				end
+
 				local pos = part.Position
 				local dist = (Vector3.new(pos.X, center.Y, pos.Z) - center).Magnitude
 				local angle = math.atan2(pos.Z - center.Z, pos.X - center.X)
@@ -1088,23 +1515,13 @@ if game.PlaceId == 189707 then -- natural disaster survival (og ass game)
 					center.Z + math.sin(newAngle) * math.min(config.radius, dist)
 				)
 
-				local velocity = (targetPos - part.Position).Unit * config.strength
-				part.Velocity = velocity
+				local direction = (targetPos - pos)
+				part.Velocity = direction.Unit * config.strength
 			end
 		end
 	end)
 
-	--// UI Buttons
-	NatDisasterSection:NewButton("Get Disaster", "Predicts Disaster", function()
-		SaveConfig()
-		local char = Workspace:FindFirstChild(LocalPlayer.Name)
-		if char and char:FindFirstChild("SurvivalTag") then
-			Notify(char.SurvivalTag.Value)
-		else
-			Notify("Wait until you are on the island")
-		end
-	end)
-
+	-- UI controls
 	NatDisasterSection:NewToggle("Ring Parts", "Enable rotating part ring", function(state)
 		ringPartsEnabled = state
 		SaveConfig()
@@ -1129,6 +1546,16 @@ if game.PlaceId == 189707 then -- natural disaster survival (og ass game)
 		config.strength = val
 		SaveConfig()
 	end)
+
+	NatDisasterSection:NewButton("Get Disaster", "Predicts Disaster", function()
+		SaveConfig()
+		local char = Workspace:FindFirstChild(LocalPlayer.Name)
+		if char and char:FindFirstChild("SurvivalTag") then
+			Notify(char.SurvivalTag.Value)
+		else
+			Notify("Wait until you are on the island")
+		end
+	end)
 else
 	NatDisasterSection:NewLabel("Join Natural Disasters to load features")
 	NatDisasterSection:NewButton("Join Game", "Joins the required game", function()
@@ -1143,6 +1570,7 @@ else
 		if not success then
 			warn("Teleport failed:", err)
 			Notify("Teleport failed. Check console for details.")
+			Notify(err)
 		else
 			Notify("Teleporting to Natural Disaster Survival...")
 		end
@@ -1161,6 +1589,66 @@ SettingsSection:NewKeybind("Menu Bind", "Toggle the UI menu", keybind, function(
 	SaveConfig()
 end)
 
+--// Aimlock and Trigger bot functions
+local function getClosestTarget()
+	local closest, shortest = nil, math.huge
+	local screenCenter = Camera.ViewportSize / 2
+
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+			local head = plr.Character:FindFirstChild("Head")
+			if head then
+				local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+				local dist = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+				if onScreen and dist < shortest and dist <= 150 then
+					closest = plr
+					shortest = dist
+				end
+			end
+		end
+	end
+
+	return closest
+end
+
+-- // Aim Function (Memory)
+local function aimToHead(target)
+	if not target or not target.Character then return end
+	local head = target.Character:FindFirstChild("Head")
+	if not head then return end
+
+	local predicted = head.Position + head.Velocity * 0.05
+	Camera.CFrame = CFrame.new(Camera.CFrame.Position, predicted)
+end
+
+--// Aimlock and Trigger Bot detection
+RunService.RenderStepped:Connect(function()
+	-- Aimlock
+	if AimlockEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+		Aimlock_Target = Aimlock_Target or getClosestTarget()
+		if Aimlock_Target then
+			aimToHead(Aimlock_Target)
+		end
+	else
+		Aimlock_Target = nil
+	end
+
+	-- Triggerbot
+	if TriggerBotEnabled and Aimlock_Target and Aimlock_Target.Character then
+		local head = Aimlock_Target.Character:FindFirstChild("Head")
+		if head then
+			local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+			local dist = (Vector2.new(pos.X, pos.Y) - (Camera.ViewportSize / 2)).Magnitude
+			if onScreen and dist <= 15 then
+				mouse1click()
+				task.wait(0.01)
+				mouse1release()
+			end
+		end
+	end
+end)
+
+
 local TeleportCheck = false
 Players.LocalPlayer.OnTeleport:Connect(function(State)
 	if (not TeleportCheck) and queueTeleport and hasqueueTeleport == true then
@@ -1173,4 +1661,4 @@ if IsMobile then
 	Notify("Some features may be limited on mobile.") 
 end
 
-Notify("Xor Hub injected!")
+Notify("Impulse Hub injected!")
