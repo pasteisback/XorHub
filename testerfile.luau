@@ -62,13 +62,13 @@ end
 --// Save settings to file
 local function SaveConfig()
 	local data = HttpService:JSONEncode(config)
-	writefile("XorHubCFG.txt", data)
+	writefile("ImpHubCFG.txt", data)
 end
 
 --// Load settings from file
 local function LoadConfig()
-	if isfile("XorHubCFG.txt") then
-		local data = readfile("XorHubCFG.txt")
+	if isfile("ImpHubCFG.txt") then
+		local data = readfile("ImpHubCFG.txt")
 		config = HttpService:JSONDecode(data)
 	end
 end
@@ -108,7 +108,7 @@ end
 local function Notify(message)
 	pcall(function()
 		StarterGui:SetCore("SendNotification", {
-			Title = "Xor Hub | Universal",
+			Title = "Impulse Hub | Universal",
 			Text = message,
 			Duration = 6
 		})
@@ -163,7 +163,7 @@ LoadConfig()
 
 --// UI Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/uilib.luau"))()
-local Window = Library.CreateLib("Xor Hub", "Ocean")
+local Window = Library.CreateLib("Impulse Hub", "Ocean")
 
 --// Tabs & Sections
 local HomeTab = Window:NewTab("Home 🏠")
@@ -177,9 +177,6 @@ local PrisonSection = PrisonTab:NewSection("Prison Life ⛓️‍💥")
 
 local DesSimTab = Window:NewTab("Destruction Sim 💥")
 local DesSimSection = DesSimTab:NewSection("Destruction Sim 💥")
-
-local RivalsTab = Window:NewTab("Rivals ⚔️")
-local RivalsSection = RivalsTab:NewSection("Rivals ⚔️")
 
 local NatDisasterTab = Window:NewTab("Natural Disasters 🌪️")
 local NatDisasterSection = NatDisasterTab:NewSection("Natural Disasters 🌪️")
@@ -264,7 +261,7 @@ UniversalSection:NewSlider("Fly Speed", "Adjust fly speed", 150, 1, function(s)
 	flySpeed = s
 end)
 
-PrisonSection:NewButton("Toggle Fly (E)", "Fly with WASD and E toggle", function()
+UniversalSection:NewButton("Toggle Fly (E)", "Fly with WASD and E toggle", function()
 	SaveConfig()
 	task.spawn(function()
 		repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -368,696 +365,789 @@ UniversalSection:NewButton("Send Bypassed Message", "Works on both chat versions
 	SendBypassedMessage(MessageToBypass)
 end)
 
---// Kill Aura Toggle
-PrisonSection:NewToggle("Kill Aura", "Automatically attacks players nearby", function(state)
-	SaveConfig()
-	local Events = {
-		TeamEvent = workspace.Remote.TeamEvent,
-		ShootEvent = game:GetService("ReplicatedStorage").ShootEvent,
-	}
-
-	local mainRemotes = game.ReplicatedStorage
-	local meleeRemote = mainRemotes["meleeEvent"]
-	local killAuraEnabled = state
-
-	task.spawn(function()
-		while killAuraEnabled do
-			task.wait()
-			for _, target in pairs(game.Players:GetPlayers()) do
-				if target ~= game.Players.LocalPlayer then
-					meleeRemote:FireServer(target)
-				end
-			end
-		end
-	end)
-end)
-
---// Taser Bypass Toggle
-PrisonSection:NewToggle("Taser Bypass", "Disables getting stunned by tasers", function(state)
-	SaveConfig()
-	local plr = game.Players.LocalPlayer
-	if state then
-		plr.Character.ClientInputHandler.Disabled = true
-		plr.CharacterAdded:Connect(function()
-			plr.Character:WaitForChild("ClientInputHandler").Disabled = true
-		end)
-	end
-end)
-
---// Arrest Bypass Toggle
-PrisonSection:NewToggle("Arrest Bypass", "Disables getting arrested by players", function(state)
-	SaveConfig()
-	if state then
-		if hasgetconnections then
-			for _, conn in ipairs(getconnections(workspace.Remote.arrestPlayer.OnClientEvent)) do
-				conn:Disable()
-			end
-		else
-			Notify("Your executor does not support getconnections. This feature will not work.")
-		end
-	end
-end)
-
---// Team Switch Buttons
-local teamButtons = {
-	{"Team Guard", "Bright blue"},
-	{"Team Neutral", "Medium stone grey"},
-	{"Team Inmates", "Bright orange"},
-	{"Team Criminals", "Bright red"},
-}
-for _, data in ipairs(teamButtons) do
-	PrisonSection:NewButton(data[1], "Switches to a team", function()
+if game.PlaceId == 155615604 then
+	--// Kill Aura Toggle
+	PrisonSection:NewToggle("Kill Aura", "Automatically attacks players nearby", function(state)
 		SaveConfig()
-		workspace.Remote.TeamEvent:FireServer(data[2])
-	end)
-end
+		local Events = {
+			TeamEvent = workspace.Remote.TeamEvent,
+			ShootEvent = game:GetService("ReplicatedStorage").ShootEvent,
+		}
 
---// Arrest All
-PrisonSection:NewButton("Arrest All", "Arrests all criminals", function()
-	SaveConfig()
-	local plr = game.Players.LocalPlayer
-	local cpos = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart.CFrame
-	local Criminals = game.Teams:FindFirstChild("Criminals")
-	if not Criminals then return warn("Criminals team not found!") end
+		local mainRemotes = game.ReplicatedStorage
+		local meleeRemote = mainRemotes["meleeEvent"]
+		local killAuraEnabled = state
 
-	for _, crim in pairs(Criminals:GetPlayers()) do
-		if crim ~= plr and crim.Character and crim.Character:FindFirstChild("HumanoidRootPart") then
-			for _ = 1, 10 do
+		task.spawn(function()
+			while killAuraEnabled do
 				task.wait()
-				workspace.Remote.arrest:InvokeServer(crim.Character.HumanoidRootPart)
-				plr.Character.HumanoidRootPart.CFrame = crim.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
-			end
-		end
-	end
-	if cpos then
-		plr.Character.HumanoidRootPart.CFrame = cpos
-	end
-	Notify("Arrested everyone.")
-end)
-
---// Kill Target
-local eztarget = ""
-PrisonSection:NewTextBox("Target", "Target for the below features", function(txt)
-	SaveConfig()
-	eztarget = txt
-end)
-
-PrisonSection:NewButton("Kill Target", "Damages selected target using melee hits", function()
-	SaveConfig()
-	local target = game.Players:FindFirstChild(eztarget)
-	if not target then return warn("Invalid player target:", eztarget) end
-
-	local meleeRemote = game.ReplicatedStorage["meleeEvent"]
-	local startTime = os.clock()
-	while os.clock() - startTime < 3 do
-		meleeRemote:FireServer(target)
-		wait(0.1)
-	end
-end)
-
-PrisonSection:NewButton("Arrest Target", "Attempts to arrest your selected target", function()
-	SaveConfig()
-	local target = game.Players:FindFirstChild(eztarget)
-	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-		workspace.Remote.arrest:InvokeServer(target.Character.HumanoidRootPart)
-	else
-		warn("Invalid player target:", eztarget)
-	end
-end)
-
-PrisonSection:NewButton("TP to target", "Punch nearby enemies instantly using key", function()
-	SaveConfig()
-	local target = game.Players:FindFirstChild(eztarget)
-	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-		game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
-	else
-		warn("Invalid player target:", eztarget)
-	end
-end)
-
---// Instant Punch
-PrisonSection:NewButton("Instant Punch", "Punch nearby enemies instantly using key", function()
-	SaveConfig()
-	local plr = game.Players.LocalPlayer
-	local meleeRemote = game.ReplicatedStorage["meleeEvent"]
-	local mouse = plr:GetMouse()
-	local cooldown = false
-
-	local function punch()
-		cooldown = true
-		local part = Instance.new("Part", plr.Character)
-		part.Transparency = 1
-		part.Size = Vector3.new(5, 2, 3)
-		part.CanCollide = false
-		local weld = Instance.new("Weld", part)
-		weld.Part0 = plr.Character.Torso
-		weld.Part1 = part
-		weld.C1 = CFrame.new(0, 0, 2)
-
-		part.Touched:Connect(function(hit)
-			local victim = game.Players:FindFirstChild(hit.Parent.Name)
-			if victim and victim ~= plr then
-				part:Destroy()
-				for _ = 1, 100 do
-					meleeRemote:FireServer(victim)
-				end
-			end
-		end)
-
-		task.wait(1)
-		cooldown = false
-		part:Destroy()
-	end
-
-	mouse.KeyDown:Connect(function(key)
-		if not cooldown and key:lower() == "f" then
-			punch()
-		end
-	end)
-end)
-
---// Mod Equipped Gun
-PrisonSection:NewButton("Mod equipped gun", "Overpowers currently equipped gun’s stats", function()
-	SaveConfig()
-	local plr = game.Players.LocalPlayer
-	local tool = plr.Character:FindFirstChildOfClass("Tool")
-	if not tool or not tool:FindFirstChild("GunStates") then return Notify("Needs to be a gun!") end
-
-	local stats = require(tool.GunStates)
-	stats.Damage = 9e9
-	stats.FireRate = 0.001
-	stats.Range = math.huge
-	stats.MaxAmmo = math.huge
-	stats.StoredAmmo = math.huge
-	stats.AmmoPerClip = math.huge
-	stats.CurrentAmmo = math.huge
-
-	if tool.Name ~= "Remington 870" then
-		stats.Bullets = 1
-		stats.AutoFire = true
-	end
-
-	Notify("Modded " .. tool.Name)
-end)
-
---// Get Guns
-PrisonSection:NewButton("Get guns", "Teleports and equips powerful prison weapons", function()
-	SaveConfig()
-	local plr = game.Players.LocalPlayer
-	local savedCFrame = plr.Character:GetPrimaryPartCFrame()
-
-	local function teleportToPickup(name)
-		local item = workspace.Prison_ITEMS.giver[name]
-		plr.Character:SetPrimaryPartCFrame(item.ITEMPICKUP.CFrame)
-		task.wait()
-		workspace.Remote.ItemHandler:InvokeServer(item.ITEMPICKUP)
-	end
-
-	teleportToPickup("Remington 870")
-	teleportToPickup("M9")
-	teleportToPickup("AK-47")
-
-	plr.Character:SetPrimaryPartCFrame(savedCFrame)
-end)
-
---// No Doors
-PrisonSection:NewButton("No doors", "Deletes all doors to unlock areas", function()
-	SaveConfig()
-	if workspace:FindFirstChild("Prison_Cellblock") then
-		workspace.Prison_Cellblock:FindFirstChild("doors"):Destroy()
-	end
-	for _, v in pairs(workspace:GetChildren()) do
-		if v.Name == "Doors" then
-			v:Destroy()
-		end
-	end
-end)
-
---// BTools
-PrisonSection:NewButton("Btools", "Gives classic building tools", function()
-	SaveConfig()
-	local types = {"Clone", "GameTool", "Hammer", "Script", "Grab"}
-	for _, type in ipairs(types) do
-		local tool = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
-		tool.BinType = type
-	end
-	Notify("You have received btools.")
-end)
-
---// Teleports
-local teleports = {
-	{"TP inside of prison", "Teleport to inside of prison building", Vector3.new(879,99,2377)},
-	{"TP to criminal base", "Teleport directly to criminal team base", Vector3.new(-943, 96, 2055)},
-	{"TP to guard area", "Teleport to the armed guard location", Vector3.new(802,99,2270)}
-}
-for _, t in ipairs(teleports) do
-	PrisonSection:NewButton(t[1], t[2], function()
-		SaveConfig()
-		game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(t[3])
-	end)
-end
-
---// Loop Kill All Toggle
-PrisonSection:NewToggle("Loop Kill All", "Teleports to and attacks players", function(state)
-	SaveConfig()
-	Notify("Not killing? Kill Aura is required to be on.")
-	task.spawn(function()
-		while state do
-			task.wait(1)
-			local players = game.Players:GetPlayers()
-			if #players > 0 then
-				local target = players[math.random(1, #players)]
-				if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-					local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-					if hrp then
-						hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+				for _, target in pairs(game.Players:GetPlayers()) do
+					if target ~= game.Players.LocalPlayer then
+						meleeRemote:FireServer(target)
 					end
 				end
 			end
+		end)
+	end)
+
+	--// Taser Bypass Toggle
+	PrisonSection:NewToggle("Taser Bypass", "Disables getting stunned by tasers", function(state)
+		SaveConfig()
+		local plr = game.Players.LocalPlayer
+		if state then
+			plr.Character.ClientInputHandler.Disabled = true
+			plr.CharacterAdded:Connect(function()
+				plr.Character:WaitForChild("ClientInputHandler").Disabled = true
+			end)
 		end
 	end)
-end)
 
---// Godmode
-PrisonSection:NewToggle("Godmode", "Prevents death and refreshes on respawn", function(state)
-	SaveConfig()
-	local player = game.Players.LocalPlayer
-	local char = player.Character or player.CharacterAdded:Wait()
-	local humanoid = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
+	--// Arrest Bypass Toggle
+	PrisonSection:NewToggle("Arrest Bypass", "Disables getting arrested by players", function(state)
+		SaveConfig()
+		if state then
+			if hasgetconnections then
+				for _, conn in ipairs(getconnections(workspace.Remote.arrestPlayer.OnClientEvent)) do
+					conn:Disable()
+				end
+			else
+				Notify("Your executor does not support getconnections. This feature will not work.")
+			end
+		end
+	end)
 
-	if state then
-		humanoid.BreakJointsOnDeath = false
+	--// Team Switch Buttons
+	local teamButtons = {
+		{"Team Guard", "Bright blue"},
+		{"Team Neutral", "Medium stone grey"},
+		{"Team Inmates", "Bright orange"},
+		{"Team Criminals", "Bright red"},
+	}
+	for _, data in ipairs(teamButtons) do
+		PrisonSection:NewButton(data[1], "Switches to a team", function()
+			SaveConfig()
+			workspace.Remote.TeamEvent:FireServer(data[2])
+		end)
+	end
 
-		humanoid.Died:Connect(function()
-			if not state then return end
-			local pos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.CFrame
-			player:LoadCharacter()
-			task.defer(function()
-				if pos and player.Character:FindFirstChild("HumanoidRootPart") then
-					player.Character:WaitForChild("HumanoidRootPart").CFrame = pos
+	--// Car Spawn
+	PrisonSection:NewButton("Spawn Car", "Spawns a car at your location", function()
+		SaveConfig()
+
+		local Players = game:GetService("Players")
+		local Workspace = game:GetService("Workspace")
+		local RunService = game:GetService("RunService")
+		local Remote = Workspace:WaitForChild("Remote")
+
+		local LocalPlayer = Players.LocalPlayer
+		local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+		local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+		local HRP = Character:WaitForChild("HumanoidRootPart")
+		local OldPos = Character:GetPrimaryPartCFrame()
+
+		-- Move player to the car spawn location
+		Character:SetPrimaryPartCFrame(CFrame.new(-910, 95, 2157))
+		task.wait(0.3)
+
+		local car
+		local carSpawned = false
+
+		-- Wait for car to spawn
+		local conn = Workspace.CarContainer.ChildAdded:Connect(function(child)
+			car = child
+			carSpawned = true
+		end)
+
+		-- Continuously fire car spawner
+		local buttons = Workspace:WaitForChild("Prison_ITEMS"):WaitForChild("buttons")
+		local spawner = buttons:GetChildren()[8]:FindFirstChild("Car Spawner")
+		if not spawner then return Notify("Car spawner not found.") end
+
+		while not carSpawned do
+			task.wait(0.1)
+			Remote.ItemHandler:InvokeServer(spawner)
+		end
+
+		conn:Disconnect()
+
+		-- Wait for all car components
+		repeat task.wait() until car:FindFirstChild("RWD") and car:FindFirstChild("Body") and car.Body:FindFirstChild("VehicleSeat")
+
+		-- Set car primary part
+		car.PrimaryPart = car.RWD
+
+		-- Return to original position
+		Character:SetPrimaryPartCFrame(OldPos)
+
+		-- Sit in the car
+		local VehicleSeat = car.Body.VehicleSeat
+		VehicleSeat:Sit(Humanoid)
+
+		-- Sync car with player position until seated
+		repeat
+			RunService.RenderStepped:Wait()
+			car:SetPrimaryPartCFrame(OldPos)
+			HRP.CFrame = VehicleSeat.CFrame
+			VehicleSeat:Sit(Humanoid)
+		until Humanoid.Sit
+
+		Notify("Car spawned and seated!")
+	end)
+
+	--// Arrest All
+	PrisonSection:NewButton("Arrest All", "Arrests all criminals", function()
+		SaveConfig()
+		local plr = game.Players.LocalPlayer
+		local cpos = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character.HumanoidRootPart.CFrame
+		local Criminals = game.Teams:FindFirstChild("Criminals")
+		if not Criminals then return warn("Criminals team not found!") end
+
+		for _, crim in pairs(Criminals:GetPlayers()) do
+			if crim ~= plr and crim.Character and crim.Character:FindFirstChild("HumanoidRootPart") then
+				for _ = 1, 10 do
+					task.wait()
+					workspace.Remote.arrest:InvokeServer(crim.Character.HumanoidRootPart)
+					plr.Character.HumanoidRootPart.CFrame = crim.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+				end
+			end
+		end
+		if cpos then
+			plr.Character.HumanoidRootPart.CFrame = cpos
+		end
+		Notify("Arrested everyone.")
+	end)
+
+	--// Kill Target
+	local eztarget = ""
+	PrisonSection:NewTextBox("Target", "Target for the below features", function(txt)
+		SaveConfig()
+		eztarget = txt
+	end)
+
+	PrisonSection:NewButton("Kill Target", "Damages selected target using melee hits", function()
+		SaveConfig()
+		local target = game.Players:FindFirstChild(eztarget)
+		if not target then return warn("Invalid player target:", eztarget) end
+
+		local meleeRemote = game.ReplicatedStorage["meleeEvent"]
+		local startTime = os.clock()
+		while os.clock() - startTime < 3 do
+			meleeRemote:FireServer(target)
+			wait(0.1)
+		end
+	end)
+
+	PrisonSection:NewButton("Arrest Target", "Attempts to arrest your selected target", function()
+		SaveConfig()
+		local target = game.Players:FindFirstChild(eztarget)
+		if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+			workspace.Remote.arrest:InvokeServer(target.Character.HumanoidRootPart)
+		else
+			warn("Invalid player target:", eztarget)
+		end
+	end)
+
+	PrisonSection:NewButton("TP to target", "Punch nearby enemies instantly using key", function()
+		SaveConfig()
+		local target = game.Players:FindFirstChild(eztarget)
+		if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+		else
+			warn("Invalid player target:", eztarget)
+		end
+	end)
+
+	--// Instant Punch
+	PrisonSection:NewButton("Instant Punch", "Punch nearby enemies instantly using key", function()
+		SaveConfig()
+		local plr = game.Players.LocalPlayer
+		local meleeRemote = game.ReplicatedStorage["meleeEvent"]
+		local mouse = plr:GetMouse()
+		local cooldown = false
+
+		local function punch()
+			cooldown = true
+			local part = Instance.new("Part", plr.Character)
+			part.Transparency = 1
+			part.Size = Vector3.new(5, 2, 3)
+			part.CanCollide = false
+			local weld = Instance.new("Weld", part)
+			weld.Part0 = plr.Character.Torso
+			weld.Part1 = part
+			weld.C1 = CFrame.new(0, 0, 2)
+
+			part.Touched:Connect(function(hit)
+				local victim = game.Players:FindFirstChild(hit.Parent.Name)
+				if victim and victim ~= plr then
+					part:Destroy()
+					for _ = 1, 100 do
+						meleeRemote:FireServer(victim)
+					end
 				end
 			end)
-		end)
-	else
-		humanoid.BreakJointsOnDeath = true
-	end
-end)
 
-PrisonSection:NewButton("Crash Server", "Crashes the server for everyone", function()
-	SaveConfig()
-
-	local player = game.Players.LocalPlayer
-	local gunName = "Remington 870"
-	local itemPickup = workspace.Prison_ITEMS.giver[gunName].ITEMPICKUP
-	local remote = workspace.Remote.ItemHandler
-
-	-- Request the weapon
-	remote:InvokeServer(itemPickup)
-
-	-- Move gun to character if it's in backpack
-	for _, tool in ipairs(player.Backpack:GetChildren()) do
-		if tool.Name == gunName then
-			tool.Parent = player.Character
+			task.wait(1)
+			cooldown = false
+			part:Destroy()
 		end
-	end
 
-	-- Get tool instance and unequip
-	local gunTool = player.Character:FindFirstChild(gunName)
-	if not gunTool then
-		return warn("Gun not equipped.")
-	end
+		mouse.KeyDown:Connect(function(key)
+			if not cooldown and key:lower() == "f" then
+				punch()
+			end
+		end)
+	end)
 
-	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid:UnequipTools()
-	end
+	--// Mod Equipped Gun
+	PrisonSection:NewButton("Mod equipped gun", "Overpowers currently equipped gun’s stats", function()
+		SaveConfig()
+		local plr = game.Players.LocalPlayer
+		local tool = plr.Character:FindFirstChildOfClass("Tool")
+		if not tool or not tool:FindFirstChild("GunStates") then return Notify("Needs to be a gun!") end
 
-	-- Fire overloaded bullets repeatedly
-	local function fireExploit()
-		local bulletData = {{
-			Hit = workspace.Terrain, -- Dummy target
-			Distance = 100,
-			Cframe = CFrame.new(0, 1, 1),
-			RayObject = Ray.new(Vector3.new(0.1, 0.2, 0.3), Vector3.new(0.3, 0.4, 0.5))
-		}}
+		local stats = require(tool.GunStates)
+		stats.Damage = 9e9
+		stats.FireRate = 0.001
+		stats.Range = math.huge
+		stats.MaxAmmo = math.huge
+		stats.StoredAmmo = math.huge
+		stats.AmmoPerClip = math.huge
+		stats.CurrentAmmo = math.huge
 
-		game.ReplicatedStorage.ShootEvent:FireServer(bulletData, gunTool)
-	end
+		if tool.Name ~= "Remington 870" then
+			stats.Bullets = 1
+			stats.AutoFire = true
+		end
 
-	-- Rapid-fire loop using Stepped for max performance
-	RunService.Stepped:Connect(function()
-		for _ = 1, 5 do -- Adjustable spam count
-			fireExploit()
+		Notify("Modded " .. tool.Name)
+	end)
+
+	--// Get Guns
+	PrisonSection:NewButton("Get guns", "Teleports and equips powerful prison weapons", function()
+		SaveConfig()
+		local plr = game.Players.LocalPlayer
+		local savedCFrame = plr.Character:GetPrimaryPartCFrame()
+
+		local function teleportToPickup(name)
+			local item = workspace.Prison_ITEMS.giver[name]
+			plr.Character:SetPrimaryPartCFrame(item.ITEMPICKUP.CFrame)
+			task.wait()
+			workspace.Remote.ItemHandler:InvokeServer(item.ITEMPICKUP)
+		end
+
+		teleportToPickup("Remington 870")
+		teleportToPickup("M9")
+		teleportToPickup("AK-47")
+
+		plr.Character:SetPrimaryPartCFrame(savedCFrame)
+	end)
+
+	--// No Doors
+	PrisonSection:NewButton("No doors", "Deletes all doors to unlock areas", function()
+		SaveConfig()
+		if workspace:FindFirstChild("Prison_Cellblock") then
+			workspace.Prison_Cellblock:FindFirstChild("doors"):Destroy()
+		end
+		for _, v in pairs(workspace:GetChildren()) do
+			if v.Name == "Doors" then
+				v:Destroy()
+			end
 		end
 	end)
-end)
 
---// Coin and Level Input
-local moneyamt, lvlamt = 0, 0
+	--// BTools
+	PrisonSection:NewButton("Btools", "Gives classic building tools", function()
+		SaveConfig()
+		local types = {"Clone", "GameTool", "Hammer", "Script", "Grab"}
+		for _, type in ipairs(types) do
+			local tool = Instance.new("HopperBin", game.Players.LocalPlayer.Backpack)
+			tool.BinType = type
+		end
+		Notify("You have received btools.")
+	end)
 
-DesSimSection:NewTextBox("Coins", "Enter amount to add", function(txt)
-	SaveConfig()
-	moneyamt = tonumber(txt) or 0
-end)
-
-DesSimSection:NewTextBox("Level", "Enter desired level", function(txt)
-	SaveConfig()
-	lvlamt = tonumber(txt) or 0
-end)
-
---// Add Coins
-DesSimSection:NewButton("Add Coins", "Adds selected coin amount", function()
-	SaveConfig()
-	if moneyamt > 0 then
-		game:GetService("ReplicatedStorage").Remotes.generateBoost:FireServer("Coins", 999999, moneyamt)
-		Notify("Added " .. moneyamt .. " Coins!")
-	else
-		Notify("Invalid coin amount!")
+	--// Teleports
+	local teleports = {
+		{"TP inside of prison", "Teleport to inside of prison building", Vector3.new(879,99,2377)},
+		{"TP to criminal base", "Teleport directly to criminal team base", Vector3.new(-943, 96, 2055)},
+		{"TP to guard area", "Teleport to the armed guard location", Vector3.new(802,99,2270)}
+	}
+	for _, t in ipairs(teleports) do
+		PrisonSection:NewButton(t[1], t[2], function()
+			SaveConfig()
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(t[3])
+		end)
 	end
-end)
 
---// Add Level
-DesSimSection:NewButton("Add Level", "Sets your player level", function()
-	SaveConfig()
-	local Event = game:GetService("ReplicatedStorage").Remotes.generateBoost
-	local currentLvl = game.Players.LocalPlayer.leaderstats.Level.Value
-	local targetLvl = lvlamt
-	local diff = math.abs(targetLvl - currentLvl)
-	local direction = targetLvl > currentLvl and 1 or -1
-	for _ = 1, math.ceil(diff / 15) do
-		local fireAmt = math.min(diff, 15) * direction
-		Event:FireServer("Levels", 480, fireAmt)
-		diff -= math.abs(fireAmt)
-		wait()
-	end
-	Notify("Set Level to " .. lvlamt .. "!")
-end)
+	--// Loop Kill All Toggle
+	PrisonSection:NewToggle("Loop Kill All", "Teleports to and attacks players", function(state)
+		SaveConfig()
+		Notify("Not killing? Kill Aura is required to be on.")
+		task.spawn(function()
+			while state do
+				task.wait(1)
+				local players = game.Players:GetPlayers()
+				if #players > 0 then
+					local target = players[math.random(1, #players)]
+					if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+						local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if hrp then
+							hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 1)
+						end
+					end
+				end
+			end
+		end)
+	end)
 
---// Sell Bricks
-DesSimSection:NewButton("Sell Bricks", "Sells all your bricks", function()
-	SaveConfig()
-	game:GetService("ReplicatedStorage").Remotes.sellBricks:FireServer()
-	Notify("Sold bricks.")
-end)
+	--// Godmode
+	PrisonSection:NewToggle("Godmode", "Prevents death and refreshes on respawn", function(state)
+		SaveConfig()
+		local player = game.Players.LocalPlayer
+		local char = player.Character or player.CharacterAdded:Wait()
+		local humanoid = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
 
---// Infinite Backpack Display
-local function displayInfBackpack()
-	local plrGui = game:GetService("Players").LocalPlayer.PlayerGui.MainUI.StatsFrame.Stats.Bricks.amnt
-	local backpackAmt = workspace[LocalPlayer.Name].Backpack.HUD.backpackUI.amnt
-	local newAmt = plrGui:Clone()
-	local newAmt2 = backpackAmt:Clone()
-	newAmt.Text, newAmt2.Text = "inf", "inf"
-	newAmt.Name, newAmt2.Name = "amount", "amount"
-	newAmt.Parent, newAmt2.Parent = plrGui.Parent, backpackAmt.Parent
-	plrGui:Destroy()
-	backpackAmt:Destroy()
+		if state then
+			humanoid.BreakJointsOnDeath = false
+
+			humanoid.Died:Connect(function()
+				if not state then return end
+				local pos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.CFrame
+				player:LoadCharacter()
+				task.defer(function()
+					if pos and player.Character:FindFirstChild("HumanoidRootPart") then
+						player.Character:WaitForChild("HumanoidRootPart").CFrame = pos
+					end
+				end)
+			end)
+		else
+			humanoid.BreakJointsOnDeath = true
+		end
+	end)
+
+	PrisonSection:NewButton("Crash Server", "Crashes the server for everyone", function()
+		SaveConfig()
+
+		local player = game.Players.LocalPlayer
+		local gunName = "Remington 870"
+		local itemPickup = workspace.Prison_ITEMS.giver[gunName].ITEMPICKUP
+		local remote = workspace.Remote.ItemHandler
+
+		-- Request the weapon
+		remote:InvokeServer(itemPickup)
+
+		-- Move gun to character if it's in backpack
+		for _, tool in ipairs(player.Backpack:GetChildren()) do
+			if tool.Name == gunName then
+				tool.Parent = player.Character
+			end
+		end
+
+		-- Get tool instance and unequip
+		local gunTool = player.Character:FindFirstChild(gunName)
+		if not gunTool then
+			return warn("Gun not equipped.")
+		end
+
+		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid:UnequipTools()
+		end
+
+		-- Fire overloaded bullets repeatedly
+		local function fireExploit()
+			local bulletData = {{
+				Hit = workspace.Terrain, -- Dummy target
+				Distance = 100,
+				Cframe = CFrame.new(0, 1, 1),
+				RayObject = Ray.new(Vector3.new(0.1, 0.2, 0.3), Vector3.new(0.3, 0.4, 0.5))
+			}}
+
+			game.ReplicatedStorage.ShootEvent:FireServer(bulletData, gunTool)
+		end
+
+		-- Rapid-fire loop using Stepped for max performance
+		RunService.Stepped:Connect(function()
+			for _ = 1, 5 do -- Adjustable spam count
+				fireExploit()
+			end
+		end)
+	end)
+else
+	PrisonSection:NewLabel("Join Destruction Simulator to load features")
+	PrisonSection:NewButton("Join Game", "Joins the required game", function()
+		SaveConfig()
+		local TeleportService = game:GetService("TeleportService")
+		local PlaceId = 155615604
+
+		local success, err = pcall(function()
+			TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
+		end)
+
+		if not success then
+			warn("Teleport failed:", err)
+			Notify("Teleport failed. Check console for details.")
+		else
+			Notify("Teleporting to Natural Disaster Survival...")
+		end
+	end)
 end
 
-DesSimSection:NewButton("Get inf backpack", "Visually gives infinite backpack", function()
-	SaveConfig()
-	task.spawn(function()
-		while true do
-			game:GetService("ReplicatedStorage").Remotes.sellBricks:FireServer()
-			displayInfBackpack()
-			wait(0.1)
+if game.PlaceId == 2248408710 then --destruction simulator
+	--// Coin and Level Input
+	local moneyamt, lvlamt = 0, 0
+
+	DesSimSection:NewTextBox("Coins", "Enter amount to add", function(txt)
+		SaveConfig()
+		moneyamt = tonumber(txt) or 0
+	end)
+
+	DesSimSection:NewTextBox("Level", "Enter desired level", function(txt)
+		SaveConfig()
+		lvlamt = tonumber(txt) or 0
+	end)
+
+	--// Add Coins
+	DesSimSection:NewButton("Add Coins", "Adds selected coin amount", function()
+		SaveConfig()
+		if moneyamt > 0 then
+			game:GetService("ReplicatedStorage").Remotes.generateBoost:FireServer("Coins", 999999, moneyamt)
+			Notify("Added " .. moneyamt .. " Coins!")
+		else
+			Notify("Invalid coin amount!")
 		end
 	end)
-end)
 
---// Spam Money Toggle
-DesSimSection:NewToggle("Spam Money", "Spams coins into inventory", function(state)
-	SaveConfig()
-	task.spawn(function()
-		while state do
-			game:GetService("ReplicatedStorage").Remotes.generateBoost:FireServer("Coins", 999999, 99999999)
-			wait(0.1)
+	--// Add Level
+	DesSimSection:NewButton("Add Level", "Sets your player level", function()
+		SaveConfig()
+		local Event = game:GetService("ReplicatedStorage").Remotes.generateBoost
+		local currentLvl = game.Players.LocalPlayer.leaderstats.Level.Value
+		local targetLvl = lvlamt
+		local diff = math.abs(targetLvl - currentLvl)
+		local direction = targetLvl > currentLvl and 1 or -1
+		for _ = 1, math.ceil(diff / 15) do
+			local fireAmt = math.min(diff, 15) * direction
+			Event:FireServer("Levels", 480, fireAmt)
+			diff -= math.abs(fireAmt)
+			wait()
 		end
+		Notify("Set Level to " .. lvlamt .. "!")
 	end)
-end)
 
---// Spam Sell Bricks Toggle
-DesSimSection:NewToggle("Spam Sell Bricks", "Rapidly sells bricks nonstop", function(state)
-	SaveConfig()
-	task.spawn(function()
-		while state do
-			game:GetService("ReplicatedStorage").Remotes.sellBricks:FireServer()
-			wait(0.01)
-		end
+	--// Sell Bricks
+	DesSimSection:NewButton("Sell Bricks", "Sells all your bricks", function()
+		SaveConfig()
+		game:GetService("ReplicatedStorage").Remotes.sellBricks:FireServer()
+		Notify("Sold bricks.")
 	end)
-end)
 
---// Spam Money Button
-DesSimSection:NewButton("Spam Money (Fast)", "Floods 5-10b/sec coins", function()
-	SaveConfig()
-	task.spawn(function()
-		while true do
-			game:GetService("ReplicatedStorage").Remotes.generateBoost:FireServer("Coins", 999999, 99999999)
-			wait(0.1)
-		end
-	end)
-end)
-
---// Area Change
-local areatochange = 0
-DesSimSection:NewTextBox("Area", "Enter target area number", function(txt)
-	SaveConfig()
-	areatochange = tonumber(txt) or 0
-end)
-
-DesSimSection:NewButton("Change Area", "Sends player to target area", function()
-	SaveConfig()
-	game:GetService("ReplicatedStorage").Remotes.areaChanged:FireServer(areatochange)
-end)
-
---// Boost Setup
-local boosttypeforplr, boostdurationforplr, boostmultiplierforplr = nil, 180, 2
-
-DesSimSection:NewDropdown("Boost Type", "Select your boost type", {"XP", "Super Jump", "Coin", "Brick", "Speed"}, function(opt)
-	SaveConfig()
-	boosttypeforplr = opt
-end)
-
-DesSimSection:NewTextBox("Boost Duration", "Duration in seconds", function(txt)
-	SaveConfig()
-	boostdurationforplr = tonumber(txt) or 0
-end)
-
-DesSimSection:NewTextBox("Boost Multiplier", "Multiplier (e.g. 2x, 3x)", function(txt)
-	SaveConfig()
-	boostmultiplierforplr = tonumber(txt) or 0
-end)
-
-DesSimSection:NewButton("Apply Boost", "Grants selected boost power", function()
-	SaveConfig()
-	local boostevent = game:GetService("ReplicatedStorage").Remotes:FindFirstChild("generateBoost")
-	if not boostevent then return warn("Boost event not found!") end
-	if not boosttypeforplr then return warn("No boost type selected!") end
-
-	local boostMap = {
-		["Speed"] = "ExtraSpeed",
-		["XP"] = "XPBoost",
-		["Super Jump"] = "SuperJump",
-		["Brick"] = "BrickBoost",
-		["Coin"] = "CoinBoost"
-	}
-
-	local boostKey = boostMap[boosttypeforplr]
-	if boostKey then
-		boostevent:FireServer(boostKey, boostdurationforplr, boostmultiplierforplr)
-	else
-		warn("Invalid boost type!")
+	--// Infinite Backpack Display
+	local function displayInfBackpack()
+		local plrGui = game:GetService("Players").LocalPlayer.PlayerGui.MainUI.StatsFrame.Stats.Bricks.amnt
+		local backpackAmt = workspace[LocalPlayer.Name].Backpack.HUD.backpackUI.amnt
+		local newAmt = plrGui:Clone()
+		local newAmt2 = backpackAmt:Clone()
+		newAmt.Text, newAmt2.Text = "inf", "inf"
+		newAmt.Name, newAmt2.Name = "amount", "amount"
+		newAmt.Parent, newAmt2.Parent = plrGui.Parent, backpackAmt.Parent
+		plrGui:Destroy()
+		backpackAmt:Destroy()
 	end
-end)
 
---// Silent Aim
-RivalsSection:NewButton("Silent Aim", "Enables automatic aimbot silently", function()
-	SaveConfig()
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/rivalsslientaim.luau"))()
-end)
+	DesSimSection:NewButton("Get inf backpack", "Visually gives infinite backpack", function()
+		SaveConfig()
+		task.spawn(function()
+			while true do
+				game:GetService("ReplicatedStorage").Remotes.sellBricks:FireServer()
+				displayInfBackpack()
+				wait(0.1)
+			end
+		end)
+	end)
 
---// Device Selection
-local selectedDevice = nil
-local deviceMap = {
-	["Mobile"] = "Touch",
-	["PC"] = "MouseKeyboard",
-	["Console"] = "Gamepad"
-}
+	--// Spam Money Toggle
+	DesSimSection:NewToggle("Spam Money", "Spams coins into inventory", function(state)
+		SaveConfig()
+		task.spawn(function()
+			while state do
+				game:GetService("ReplicatedStorage").Remotes.generateBoost:FireServer("Coins", 999999, 99999999)
+				wait(0.1)
+			end
+		end)
+	end)
 
-RivalsSection:NewDropdown("Input Device", "Select control device type", {"Mobile", "PC", "Console"}, function(option)
-	SaveConfig()
-	selectedDevice = deviceMap[option]
-end)
+	--// Spam Sell Bricks Toggle
+	DesSimSection:NewToggle("Spam Sell Bricks", "Rapidly sells bricks nonstop", function(state)
+		SaveConfig()
+		task.spawn(function()
+			while state do
+				game:GetService("ReplicatedStorage").Remotes.sellBricks:FireServer()
+				wait(0.01)
+			end
+		end)
+	end)
 
-RivalsSection:NewButton("Apply Device", "Apply chosen device control type", function()
-	SaveConfig()
-	local remotePath = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-		:WaitForChild("Replication"):WaitForChild("Fighter"):WaitForChild("SetControls")
+	--// Spam Money Button
+	DesSimSection:NewButton("Spam Money (Fast)", "Floods 5-10b/sec coins", function()
+		SaveConfig()
+		task.spawn(function()
+			while true do
+				game:GetService("ReplicatedStorage").Remotes.generateBoost:FireServer("Coins", 999999, 99999999)
+				wait(0.1)
+			end
+		end)
+	end)
 
-	if selectedDevice then
-		remotePath:FireServer(selectedDevice)
-	else
-		warn("No device selected!")
+	--// Area Change
+	local areatochange = 0
+	DesSimSection:NewTextBox("Area", "Enter target area number", function(txt)
+		SaveConfig()
+		areatochange = tonumber(txt) or 0
+	end)
+
+	DesSimSection:NewButton("Change Area", "Sends player to target area", function()
+		SaveConfig()
+		game:GetService("ReplicatedStorage").Remotes.areaChanged:FireServer(areatochange)
+	end)
+
+	--// Boost Setup
+	local boosttypeforplr, boostdurationforplr, boostmultiplierforplr = nil, 180, 2
+
+	DesSimSection:NewDropdown("Boost Type", "Select your boost type", {"XP", "Super Jump", "Coin", "Brick", "Speed"}, function(opt)
+		SaveConfig()
+		boosttypeforplr = opt
+	end)
+
+	DesSimSection:NewTextBox("Boost Duration", "Duration in seconds", function(txt)
+		SaveConfig()
+		boostdurationforplr = tonumber(txt) or 0
+	end)
+
+	DesSimSection:NewTextBox("Boost Multiplier", "Multiplier (e.g. 2x, 3x)", function(txt)
+		SaveConfig()
+		boostmultiplierforplr = tonumber(txt) or 0
+	end)
+
+	DesSimSection:NewButton("Apply Boost", "Grants selected boost power", function()
+		SaveConfig()
+		local boostevent = game:GetService("ReplicatedStorage").Remotes:FindFirstChild("generateBoost")
+		if not boostevent then return warn("Boost event not found!") end
+		if not boosttypeforplr then return warn("No boost type selected!") end
+
+		local boostMap = {
+			["Speed"] = "ExtraSpeed",
+			["XP"] = "XPBoost",
+			["Super Jump"] = "SuperJump",
+			["Brick"] = "BrickBoost",
+			["Coin"] = "CoinBoost"
+		}
+
+		local boostKey = boostMap[boosttypeforplr]
+		if boostKey then
+			boostevent:FireServer(boostKey, boostdurationforplr, boostmultiplierforplr)
+		else
+			warn("Invalid boost type!")
+		end
+	end)
+else
+	DesSimSection:NewLabel("Join Destruction Simulator to load features")
+	DesSimSection:NewButton("Join Game", "Joins the required game", function()
+		SaveConfig()
+		local TeleportService = game:GetService("TeleportService")
+		local PlaceId = 2248408710
+
+		local success, err = pcall(function()
+			TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
+		end)
+
+		if not success then
+			warn("Teleport failed:", err)
+			Notify("Teleport failed. Check console for details.")
+		else
+			Notify("Teleporting to Natural Disaster Survival...")
+		end
+	end)
+end
+
+if game.PlaceId == 189707 then -- natural disaster survival (og ass game)
+	local ringPartsEnabled = false
+	local trackedParts = {}
+
+	--// Attachments
+	local baseFolder = Instance.new("Folder", Workspace)
+	local anchorPart = Instance.new("Part")
+	anchorPart.Name = "Anchor"
+	anchorPart.Anchored = true
+	anchorPart.CanCollide = false
+	anchorPart.Transparency = 1
+	anchorPart.Parent = baseFolder
+
+	local anchorAttachment = Instance.new("Attachment", anchorPart)
+
+	--// Network Setup
+	if not getgenv().Network then
+		getgenv().Network = {
+			BaseParts = {},
+			Velocity = Vector3.new(14.46, 14.46, 14.46)
+		}
+
+		function Network.RetainPart(part)
+			if typeof(part) == "Instance" and part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
+				table.insert(Network.BaseParts, part)
+				part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+				part.CanCollide = false
+			end
+		end
+
+		RunService.Heartbeat:Connect(function()
+			sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+			for _, part in ipairs(Network.BaseParts) do
+				if part:IsDescendantOf(Workspace) then
+					part.Velocity = Network.Velocity
+				end
+			end
+		end)
 	end
-end)
 
-local ringPartsEnabled = false
-local trackedParts = {}
+	--// Force Part
+	local function ForcePart(part)
+		if part:IsA("Part") and not part.Anchored and not part:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and part.Name ~= "Handle" then
+			for _, child in ipairs(part:GetChildren()) do
+				if child:IsA("BodyMover") or child:IsA("Torque") or child:IsA("AlignPosition") then
+					child:Destroy()
+				end
+			end
+			part.CanCollide = false
 
---// Attachments
-local baseFolder = Instance.new("Folder", Workspace)
-local anchorPart = Instance.new("Part")
-anchorPart.Name = "Anchor"
-anchorPart.Anchored = true
-anchorPart.CanCollide = false
-anchorPart.Transparency = 1
-anchorPart.Parent = baseFolder
+			local attachment = Instance.new("Attachment", part)
+			local torque = Instance.new("Torque", part)
+			torque.Torque = Vector3.new(100000, 100000, 100000)
+			torque.Attachment0 = attachment
 
-local anchorAttachment = Instance.new("Attachment", anchorPart)
+			local alignPos = Instance.new("AlignPosition", part)
+			alignPos.Attachment0 = attachment
+			alignPos.Attachment1 = anchorAttachment
+			alignPos.MaxForce = math.huge
+			alignPos.MaxVelocity = math.huge
+			alignPos.Responsiveness = 200
+		end
+	end
 
---// Network Setup
-if not getgenv().Network then
-	getgenv().Network = {
-		BaseParts = {},
-		Velocity = Vector3.new(14.46, 14.46, 14.46)
-	}
-
-	function Network.RetainPart(part)
-		if typeof(part) == "Instance" and part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
-			table.insert(Network.BaseParts, part)
+	--// Retain Part
+	local function RetainPart(part)
+		if part:IsA("BasePart") and not part.Anchored and part:IsDescendantOf(Workspace) then
+			if part:IsDescendantOf(LocalPlayer.Character) then return false end
 			part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
 			part.CanCollide = false
+			return true
+		end
+		return false
+	end
+
+	--// Track Parts
+	local function addPart(part)
+		if RetainPart(part) and not table.find(trackedParts, part) then
+			table.insert(trackedParts, part)
 		end
 	end
 
+	local function removePart(part)
+		local index = table.find(trackedParts, part)
+		if index then
+			table.remove(trackedParts, index)
+		end
+	end
+
+	--// Populate trackedParts
+	for _, part in ipairs(Workspace:GetDescendants()) do
+		addPart(part)
+	end
+	Workspace.DescendantAdded:Connect(addPart)
+	Workspace.DescendantRemoving:Connect(removePart)
+
+	--// Ring Effect Loop
 	RunService.Heartbeat:Connect(function()
-		sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
-		for _, part in ipairs(Network.BaseParts) do
-			if part:IsDescendantOf(Workspace) then
-				part.Velocity = Network.Velocity
+		if not ringPartsEnabled then return end
+
+		local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+
+		local center = root.Position
+
+		for _, part in ipairs(trackedParts) do
+			if part:IsA("BasePart") and part.Parent and not part.Anchored then
+				local pos = part.Position
+				local dist = (Vector3.new(pos.X, center.Y, pos.Z) - center).Magnitude
+				local angle = math.atan2(pos.Z - center.Z, pos.X - center.X)
+				local newAngle = angle + math.rad(config.speed)
+
+				local targetPos = Vector3.new(
+					center.X + math.cos(newAngle) * math.min(config.radius, dist),
+					center.Y + (config.height * math.abs(math.sin((pos.Y - center.Y) / config.height))),
+					center.Z + math.sin(newAngle) * math.min(config.radius, dist)
+				)
+
+				local velocity = (targetPos - part.Position).Unit * config.strength
+				part.Velocity = velocity
 			end
 		end
 	end)
-end
 
---// Force Part
-local function ForcePart(part)
-	if part:IsA("Part") and not part.Anchored and not part:FindFirstAncestorWhichIsA("Model"):FindFirstChild("Humanoid") and part.Name ~= "Handle" then
-		for _, child in ipairs(part:GetChildren()) do
-			if child:IsA("BodyMover") or child:IsA("Torque") or child:IsA("AlignPosition") then
-				child:Destroy()
-			end
+	--// UI Buttons
+	NatDisasterSection:NewButton("Get Disaster", "Predicts Disaster", function()
+		SaveConfig()
+		local char = Workspace:FindFirstChild(LocalPlayer.Name)
+		if char and char:FindFirstChild("SurvivalTag") then
+			Notify(char.SurvivalTag.Value)
+		else
+			Notify("Wait until you are on the island")
 		end
-		part.CanCollide = false
+	end)
 
-		local attachment = Instance.new("Attachment", part)
-		local torque = Instance.new("Torque", part)
-		torque.Torque = Vector3.new(100000, 100000, 100000)
-		torque.Attachment0 = attachment
+	NatDisasterSection:NewToggle("Ring Parts", "Enable rotating part ring", function(state)
+		ringPartsEnabled = state
+		SaveConfig()
+	end)
 
-		local alignPos = Instance.new("AlignPosition", part)
-		alignPos.Attachment0 = attachment
-		alignPos.Attachment1 = anchorAttachment
-		alignPos.MaxForce = math.huge
-		alignPos.MaxVelocity = math.huge
-		alignPos.Responsiveness = 200
-	end
-end
+	NatDisasterSection:NewSlider("Radius of ring parts", "Distance from center", 500, 0, function(val)
+		config.radius = val
+		SaveConfig()
+	end)
 
---// Retain Part
-local function RetainPart(part)
-	if part:IsA("BasePart") and not part.Anchored and part:IsDescendantOf(Workspace) then
-		if part:IsDescendantOf(LocalPlayer.Character) then return false end
-		part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-		part.CanCollide = false
-		return true
-	end
-	return false
-end
+	NatDisasterSection:NewSlider("Height of ring parts", "Vertical swirl height", 500, 0, function(val)
+		config.height = val
+		SaveConfig()
+	end)
 
---// Track Parts
-local function addPart(part)
-	if RetainPart(part) and not table.find(trackedParts, part) then
-		table.insert(trackedParts, part)
-	end
-end
+	NatDisasterSection:NewSlider("Speed of ring parts", "Rotation speed", 500, 0, function(val)
+		config.speed = val
+		SaveConfig()
+	end)
 
-local function removePart(part)
-	local index = table.find(trackedParts, part)
-	if index then
-		table.remove(trackedParts, index)
-	end
-end
+	NatDisasterSection:NewSlider("Strength of ring parts", "Force toward orbit", 500, 0, function(val)
+		config.strength = val
+		SaveConfig()
+	end)
+else
+	NatDisasterSection:NewLabel("Join Natural Disasters to load features")
+	NatDisasterSection:NewButton("Join Game", "Joins the required game", function()
+		SaveConfig()
+		local TeleportService = game:GetService("TeleportService")
+		local PlaceId = 189707
 
---// Populate trackedParts
-for _, part in ipairs(Workspace:GetDescendants()) do
-	addPart(part)
-end
-Workspace.DescendantAdded:Connect(addPart)
-Workspace.DescendantRemoving:Connect(removePart)
+		local success, err = pcall(function()
+			TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
+		end)
 
---// Ring Effect Loop
-RunService.Heartbeat:Connect(function()
-	if not ringPartsEnabled then return end
-
-	local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-	if not root then return end
-
-	local center = root.Position
-
-	for _, part in ipairs(trackedParts) do
-		if part:IsA("BasePart") and part.Parent and not part.Anchored then
-			local pos = part.Position
-			local dist = (Vector3.new(pos.X, center.Y, pos.Z) - center).Magnitude
-			local angle = math.atan2(pos.Z - center.Z, pos.X - center.X)
-			local newAngle = angle + math.rad(config.speed)
-
-			local targetPos = Vector3.new(
-				center.X + math.cos(newAngle) * math.min(config.radius, dist),
-				center.Y + (config.height * math.abs(math.sin((pos.Y - center.Y) / config.height))),
-				center.Z + math.sin(newAngle) * math.min(config.radius, dist)
-			)
-
-			local velocity = (targetPos - part.Position).Unit * config.strength
-			part.Velocity = velocity
+		if not success then
+			warn("Teleport failed:", err)
+			Notify("Teleport failed. Check console for details.")
+		else
+			Notify("Teleporting to Natural Disaster Survival...")
 		end
-	end
-end)
-
---// UI Buttons
-NatDisasterSection:NewButton("Get Disaster", "Predicts Disaster", function()
-	SaveConfig()
-	local char = Workspace:FindFirstChild(LocalPlayer.Name)
-	if char and char:FindFirstChild("SurvivalTag") then
-		Notify(char.SurvivalTag.Value)
-	else
-		Notify("Wait until you are on the island")
-	end
-end)
-
-NatDisasterSection:NewToggle("Ring Parts", "Enable rotating part ring", function(state)
-	ringPartsEnabled = state
-	SaveConfig()
-end)
-
-NatDisasterSection:NewSlider("Radius of ring parts", "Distance from center", 500, 0, function(val)
-	config.radius = val
-	SaveConfig()
-end)
-
-NatDisasterSection:NewSlider("Height of ring parts", "Vertical swirl height", 500, 0, function(val)
-	config.height = val
-	SaveConfig()
-end)
-
-NatDisasterSection:NewSlider("Speed of ring parts", "Rotation speed", 500, 0, function(val)
-	config.speed = val
-	SaveConfig()
-end)
-
-NatDisasterSection:NewSlider("Strength of ring parts", "Force toward orbit", 500, 0, function(val)
-	config.strength = val
-	SaveConfig()
-end)
+	end)
+end
 
 --// Default to RightShift if config.bind is invalid or missing
 local defaultKey = Enum.KeyCode.RightShift
