@@ -793,6 +793,25 @@ if game.PlaceId == 155615604 then
 		end
 		Notify("Arrested everyone.")
 	end)
+	
+	local antiShieldEnabled = false
+	
+	PrisonSection:NewToggle("Anti-Shield", "You can shoot through shields", function(state)
+		antiShieldEnabled = state
+
+		if state then
+			task.spawn(function()
+				while antiShieldEnabled do
+					for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+						if v and v.Character and v:FindFirstChild("Torso") and v:FindFirstChild("Torso"):FindFirstChild("ShieldFolder") then
+							v.Torso:FindFirstChild("ShieldFolder"):Destroy()
+						end
+					end
+					task.wait(0.2) -- adjust to control how often it checks
+				end
+			end)
+		end
+	end)
 
 	--// Get keycard
 	PrisonSection:NewButton("Get keycard", "Kills cop and grabs keycard", function()
