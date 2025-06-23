@@ -12,6 +12,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TextChatService = game:GetService("TextChatService")
 local Workspace = game:GetService("Workspace")
+local LocalizationService = game:GetService("LocalizationService")
 
 --// Player & Mouse
 local LocalPlayer = Players.LocalPlayer
@@ -51,6 +52,84 @@ local function GetExecutor()
 	end
 	return executor
 end
+
+local function GetFullServerInfo()
+	local serverInfo = {}
+
+	-- Game Details
+	serverInfo.Game = {
+		GameId = game.GameId,
+		PlaceId = game.PlaceId,
+		JobId = game.JobId,
+		PrivateServerId = game.PrivateServerId,
+		PrivateServerOwnerId = game.PrivateServerOwnerId
+	}
+
+	-- Player Details
+	serverInfo.Players = {
+		LocalPlayer = Players.LocalPlayer and Players.LocalPlayer.Name or "Server",
+		PlayerCount = #Players:GetPlayers(),
+		MaxPlayers = Players.MaxPlayers,
+		AllPlayers = {}
+	}
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		table.insert(serverInfo.Players.AllPlayers, {
+			Name = player.Name,
+			UserId = player.UserId,
+			AccountAge = player.AccountAge,
+			Team = tostring(player.Team)
+		})
+	end
+
+	-- Time Details
+	serverInfo.Time = {
+		TimeOfDay = game.Lighting and game.Lighting.TimeOfDay or "N/A",
+		ClockTime = game.Lighting and game.Lighting.ClockTime or "N/A",
+		UnixTimestamp = os.time(),
+		Date = os.date("%Y-%m-%d %H:%M:%S")
+	}
+
+	-- Server Details
+	local success, region = pcall(function()
+		return LocalizationService:GetCountryRegionForPlayerAsync(Players:GetPlayers()[1])
+	end)
+
+	serverInfo.Environment = {
+		IsStudio = RunService:IsStudio(),
+		IsServer = RunService:IsServer(),
+		IsClient = RunService:IsClient(),
+		ServerRegion = success and region or "Unavailable",
+	}
+
+	-- Workspace Details
+	serverInfo.Workspace = {
+		Gravity = workspace.Gravity,
+		StreamingEnabled = workspace.StreamingEnabled,
+		TerrainExists = workspace:FindFirstChildOfClass("Terrain") ~= nil
+	}
+
+	return serverInfo
+end
+
+local function PrintTable(t, indent)
+	indent = indent or 0
+	local spacing = string.rep("  ", indent)
+
+	for k, v in pairs(t) do
+		if typeof(v) == "table" then
+			print(spacing .. tostring(k) .. ":")
+			PrintTable(v, indent + 1)
+		else
+			print(spacing .. tostring(k) .. ": " .. tostring(v))
+		end
+	end
+end
+
+-- Call and Print
+local serverInfo = GetFullServerInfo()
+print("===== SERVER INFO =====")
+PrintTable(serverInfo)
 
 local function DetectBaseExploit()
 	local exploit = GetExecutor()
@@ -219,14 +298,44 @@ local HomeSection = HomeTab:NewSection("Home 🏠")
 local UniversalTab = Window:NewTab("Universal 🎯")
 local UniversalSection = UniversalTab:NewSection("Universal 🎯")
 
-local PrisonTab = Window:NewTab("Prison Life ⛓️‍💥")
-local PrisonSection = PrisonTab:NewSection("Prison Life ⛓️‍💥")
+local PrisonTab
+local PrisonSection
 
-local DesSimTab = Window:NewTab("Destruction Sim 💥")
-local DesSimSection = DesSimTab:NewSection("Destruction Sim 💥")
+if game.PlaceId == 155615604 then
+	PrisonTab = Window:NewTab("Prison Life ⛓️‍💥")
+	PrisonSection = PrisonTab:NewSection("Prison Life ⛓️‍💥")
+end
 
-local NatDisasterTab = Window:NewTab("Natural Disasters 🌪️")
-local NatDisasterSection = NatDisasterTab:NewSection("Natural Disasters 🌪️")
+local DesSimTab
+local DesSimSection
+
+if game.PlaceId == 2248408710 then
+	DesSimTab = Window:NewTab("Destruction Sim 💥")
+	DesSimSection = DesSimTab:NewSection("Destruction Sim 💥")
+end
+
+local NatDisasterTab
+local NatDisasterSection
+if game.PlaceId == 189707 then
+	NatDisasterTab = Window:NewTab("Natural Disasters 🌪️")
+    NatDisasterSection = NatDisasterTab:NewSection("Natural Disasters 🌪️")
+end
+
+local BreakInTab
+local BreakInSection
+
+if game.PlaceId == 3851622790 or game.PlaceId == 4620170611 then
+	BreakInTab = Window:NewTab("Break in 🦹")
+    BreakInSection = BreakInTab:NewSection("Break in 🦹")
+end
+
+local GrowAGardenTab
+local GrowAGardenSection
+
+if game.PlaceId == 126884695634066 then
+	GrowAGardenTab = Window:NewTab("Grow a garden 🌸")
+	GrowAGardenSection = GrowAGardenTab:NewSection("Grow a garden 🌸")
+end
 
 local SettingsTab = Window:NewTab("Settings ⚙️")
 local SettingsSection = SettingsTab:NewSection("Settings ⚙️")
@@ -389,6 +498,7 @@ local AimlockEnabled = false
 local AimSmoothness = 6
 local Aimlock_Target = nil
 local TriggerBotEnabled = false
+local NoclipEnabled = false
 local TriggerDelay = 0
 
 UniversalSection:NewToggle("Mouse Aimbot", "Locks mouse to target near crosshair", function(state)
@@ -409,6 +519,10 @@ end)
 
 UniversalSection:NewButton("ESP", "Allows you to view all users behind objects", function()
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/ESP.luau"))()
+end)
+
+UniversalSection:NewToggle("Noclip", "Phase through walls", function(state)
+	NoclipEnabled = state
 end)
 
 UniversalSection:NewButton("Jerk", "Loads a script that u can do sus stuff", function()
@@ -771,7 +885,7 @@ if game.PlaceId == 155615604 then
 		return result
 	end
 
-	PrisonSection:NewTextBox("Whitelist", "Whitelist users (SEPARATE WITH COMMAS)", function(txt)
+	PrisonSection:NewTextBox("Whitelist", "Whitelist users (eg: Jim,Bob,Tim)", function(txt)
 		whitelist = splitCommaString(txt)
 		SaveConfig()
 	end)
@@ -1306,23 +1420,7 @@ if game.PlaceId == 155615604 then
 		end)
 	end)
 else
-	PrisonSection:NewLabel("Join Prison Life to load features")
-	PrisonSection:NewButton("Join Game", "Joins the required game", function()
-		SaveConfig()
-		local TeleportService = game:GetService("TeleportService")
-		local PlaceId = 155615604
-
-		local success, err = pcall(function()
-			TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
-		end)
-
-		if not success then
-			warn("Teleport failed:", err)
-			Notify("Teleport failed. Check console for details.")
-		else
-			Notify("Teleporting to Prison Life...")
-		end
-	end)
+	print("Prison Life: Not loaded.")
 end
 
 if game.PlaceId == 2248408710 then --destruction simulator
@@ -1483,23 +1581,7 @@ if game.PlaceId == 2248408710 then --destruction simulator
 		end
 	end)
 else
-	DesSimSection:NewLabel("Join Destruction Simulator to load features")
-	DesSimSection:NewButton("Join Game", "Joins the required game", function()
-		SaveConfig()
-		local TeleportService = game:GetService("TeleportService")
-		local PlaceId = 2248408710
-
-		local success, err = pcall(function()
-			TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
-		end)
-
-		if not success then
-			warn("Teleport failed:", err)
-			Notify("Teleport failed. Check console for details.")
-		else
-			Notify("Teleporting to Destruction Simulator...")
-		end
-	end)
+	print("Des Sim: Not loaded.")
 end
 
 -- Exploit-heavy optimized version with full physics and reduced lag
@@ -1639,24 +1721,108 @@ if game.PlaceId == 189707 then
 		end
 	end)
 else
-	NatDisasterSection:NewLabel("Join Natural Disasters to load features")
-	NatDisasterSection:NewButton("Join Game", "Joins the required game", function()
-		SaveConfig()
-		local TeleportService = game:GetService("TeleportService")
-		local PlaceId = 189707
+	print("NAT Disaster: Not loaded.")
+end
 
-		local success, err = pcall(function()
-			TeleportService:Teleport(PlaceId, game.Players.LocalPlayer)
-		end)
-
-		if not success then
-			warn("Teleport failed:", err)
-			Notify("Teleport failed. Check console for details.")
-			Notify(err)
-		else
-			Notify("Teleporting to Natural Disaster Survival...")
+if game.PlaceId == 3851622790 or game.PlaceId == 4620170611 then
+	BreakInSection:NewButton("Befriend Cat", "Calls a remote to befriend the cat", function()
+		local Target = ReplicatedStorage.RemoteEvents.Cattery;
+		Target:FireServer();
+	end)
+	
+	BreakInSection:NewToggle("Enabled Tool Drop", "Enables ability to drop tools", function(state)
+		for i,v in pairs(game:GetService("Players").LocalPlayer.Backpack:GetChildren()) do
+			if v:IsA("Tool") then
+				v.CanBeDropped = state
+			end
 		end
 	end)
+	
+	BreakInSection:NewButton("Heal all", "Heals all alive players", function()
+		for i,v in pairs(game:GetService("Players"):GetChildren()) do
+			ReplicatedStorage.RemoteEvents.CurePlayer:FireServer(v)
+			ReplicatedStorage.RemoteEvents.HealPlayer:FireServer(v)
+		end
+	end)
+	
+	BreakInSection:NewButton("Clear backpack", "Clears all children in backpack", function()
+		for i,v in pairs(LocalPlayer.Backpack:GetChildren()) do
+			if v:IsA("Tool") then
+				v:Destroy()
+			end
+		end
+	end)
+	
+	BreakInSection:NewButton("Insta-Heal", "Fucks the cat to give you hp", function()
+		for i = 1, 200 do
+			local A_1 = "Cat"
+			local Event = ReplicatedStorage.RemoteEvents.Energy
+			Event:FireServer(A_1)
+		end
+	end)
+	
+	BreakInSection:NewButton("Kill Enemies", "Kills all enemies", function()
+		for i,v in pairs(game.Workspace.BadGuys:GetChildren()) do
+			for i = 1, 50 do
+				game:GetService("ReplicatedStorage").RemoteEvents.HitBadguy:FireServer(v,10)
+				game:GetService("ReplicatedStorage").RemoteEvents.HitBadguy:FireServer(v,996)
+				game:GetService("ReplicatedStorage").RemoteEvents.HitBadguy:FireServer(v,9)
+				game:GetService("ReplicatedStorage").RemoteEvents.HitBadguy:FireServer(v,996)
+			end
+		end
+	end)
+	
+	BreakInSection:NewButton("Open safe", "Finds and unlocks the safe", function()
+		if workspace:findFirstChild("CodeNote") then
+			ReplicatedStorage.RemoteEvents.Safe:FireServer(workspace.CodeNote.SurfaceGui.TextLabel.Text)
+		end
+	end)
+	
+	local items = {
+		{"BloxyCola", "Gives the item"},
+		{"Lollipop", "Gives the item"},
+		{"Bat", "Gives the item"},
+		{"Apple", "Gives the item"},
+		{"TeddyBloxpin", "Gives the item"},
+		{"LinkedSword", "Gives the item"},
+		{"Plank", "Gives the item"},
+		{"MedKit", "Gives the item"},
+		{"Pizza", "Gives the item"},
+		{"Cure", "Gives the item"},
+		{"Cookie", "Gives the item"},
+		{"Chips", "Gives the item"},
+	}
+
+	for _, t in ipairs(items) do
+		BreakInSection:NewButton("Give "..t[1], t[2], function()
+			SaveConfig()
+			ReplicatedStorage.RemoteEvents.GiveTool:FireServer(t[1])
+		end)
+	end
+	
+	local teleports = {
+		{"House", "Teleports to the main house", Vector3.new(-36, 3, -200)},
+		{"Basement", "Teleports to the basement", Vector3.new(71, -15, -163)},
+		{"Attic", "Teleports to the attic", Vector3.new(-16, 35, -220)},
+		{"Store", "Teleports to the store", Vector3.new(-422, 3, -121)},
+		{"Sewer", "Teleports to the sewer", Vector3.new(129, 3, -125)},
+		{"Boss Room", "Teleports to the boss room", Vector3.new(-39, -287, -1480)}
+	}
+
+	for _, t in ipairs(teleports) do
+		BreakInSection:NewButton("Teleport to "..t[1], t[2], function()
+			SaveConfig()
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(t[3])
+		end)
+	end
+else
+	print("Break in: Not loaded.")
+end
+
+if game.PlaceId == 126884695634066 then
+	
+else
+	print("Grow a garden: Not loaded.")
 end
 
 --// Default to RightShift if config.bind is invalid or missing
@@ -1725,6 +1891,17 @@ RunService.RenderStepped:Connect(function()
 				mouse1click()
 				task.wait(0.01)
 				mouse1release()
+			end
+		end
+	end
+	
+	if NoclipEnabled then
+		local Character = LocalPlayer.Character
+		if not Character then return end
+
+		for _, Part in Character:GetDescendants() do
+			if Part:IsA("BasePart") then
+				Part.CanCollide = false
 			end
 		end
 	end
