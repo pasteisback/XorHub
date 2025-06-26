@@ -1,4 +1,32 @@
---// Xor Hub V1 | Universal Script
+--[[
+.___                     .__                    ___ ___      ___.    
+|   | _____ ______  __ __|  |   ______ ____    /   |   \ __ _\_ |__  
+|   |/     \\____ \|  |  \  |  /  ___// __ \  /    ~    \  |  \ __ \ 
+|   |  Y Y  \  |_> >  |  /  |__\___ \\  ___/  \    Y    /  |  / \_\ \
+|___|__|_|  /   __/|____/|____/____  >\___  >  \___|_  /|____/|___  /
+          \/|__|                   \/     \/         \/           \/ 
+
+		Made by RamingCactus(aka: xor, cactus, no.luv)
+		Last Updated: 6/24/2025
+		Version: 1.0.0
+		https://dsc.gg/impulserbx
+--]]
+
+local string = [[
+	.___                     .__                    ___ ___      ___.    
+	|   | _____ ______  __ __|  |   ______ ____    /   |   \ __ _\_ |__  
+	|   |/     \\____ \|  |  \  |  /  ___// __ \  /    ~    \  |  \ __ \ 
+	|   |  Y Y  \  |_> >  |  /  |__\___ \\  ___/  \    Y    /  |  / \_\ \
+	|___|__|_|  /   __/|____/|____/____  >\___  >  \___|_  /|____/|___  /
+	      \/|__|                   \/     \/         \/           \/ 
+
+	Made by RamingCactus (aka: xor, cactus, no.luv)
+	Last Updated: 6/24/2025
+	Version: 1.0.0
+	https://dsc.gg/impulserbx
+]]
+
+print(string)
 
 --// Services
 local RunService = game:GetService("RunService")
@@ -34,6 +62,7 @@ local IsMobile = table.find({Enum.Platform.IOS, Enum.Platform.Android}, UserInpu
 
 --// Teleport queue function
 local queueTeleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+local ImpulseHub_HttpRequest = (syn and syn.http_request and syn.request) or request or http_request or (fluxus and fluxus.http_request and fluxus.request)
 
 --// Configuration
 local config = {
@@ -53,84 +82,6 @@ local function GetExecutor()
 	return executor
 end
 
-local function GetFullServerInfo()
-	local serverInfo = {}
-
-	-- Game Details
-	serverInfo.Game = {
-		GameId = game.GameId,
-		PlaceId = game.PlaceId,
-		JobId = game.JobId,
-		PrivateServerId = game.PrivateServerId,
-		PrivateServerOwnerId = game.PrivateServerOwnerId
-	}
-
-	-- Player Details
-	serverInfo.Players = {
-		LocalPlayer = Players.LocalPlayer and Players.LocalPlayer.Name or "Server",
-		PlayerCount = #Players:GetPlayers(),
-		MaxPlayers = Players.MaxPlayers,
-		AllPlayers = {}
-	}
-
-	for _, player in ipairs(Players:GetPlayers()) do
-		table.insert(serverInfo.Players.AllPlayers, {
-			Name = player.Name,
-			UserId = player.UserId,
-			AccountAge = player.AccountAge,
-			Team = tostring(player.Team)
-		})
-	end
-
-	-- Time Details
-	serverInfo.Time = {
-		TimeOfDay = game.Lighting and game.Lighting.TimeOfDay or "N/A",
-		ClockTime = game.Lighting and game.Lighting.ClockTime or "N/A",
-		UnixTimestamp = os.time(),
-		Date = os.date("%Y-%m-%d %H:%M:%S")
-	}
-
-	-- Server Details
-	local success, region = pcall(function()
-		return LocalizationService:GetCountryRegionForPlayerAsync(Players:GetPlayers()[1])
-	end)
-
-	serverInfo.Environment = {
-		IsStudio = RunService:IsStudio(),
-		IsServer = RunService:IsServer(),
-		IsClient = RunService:IsClient(),
-		ServerRegion = success and region or "Unavailable",
-	}
-
-	-- Workspace Details
-	serverInfo.Workspace = {
-		Gravity = workspace.Gravity,
-		StreamingEnabled = workspace.StreamingEnabled,
-		TerrainExists = workspace:FindFirstChildOfClass("Terrain") ~= nil
-	}
-
-	return serverInfo
-end
-
-local function PrintTable(t, indent)
-	indent = indent or 0
-	local spacing = string.rep("  ", indent)
-
-	for k, v in pairs(t) do
-		if typeof(v) == "table" then
-			print(spacing .. tostring(k) .. ":")
-			PrintTable(v, indent + 1)
-		else
-			print(spacing .. tostring(k) .. ": " .. tostring(v))
-		end
-	end
-end
-
--- Call and Print
-local serverInfo = GetFullServerInfo()
-print("===== SERVER INFO =====")
-PrintTable(serverInfo)
-
 local function DetectBaseExploit()
 	local exploit = GetExecutor()
 	if exploit == "Impulse" or exploit == "Light" or exploit == "AbuseX" then
@@ -140,6 +91,9 @@ local function DetectBaseExploit()
 	end
 end
 
+local function printI(txt)
+	print("[Impulse Hub]: "..txt)
+end
 --// Save settings to file
 local function SaveConfig()
 	local data = HttpService:JSONEncode(config)
@@ -240,6 +194,7 @@ local function Notify(message)
 		})
 	end)
 end
+Notify("Please wait while Impulse Hub loads.")
 
 --// Compatibility Checks
 if not identifyexecutor then
@@ -271,6 +226,15 @@ if not sethiddenproperty then
 	hassethiddenproperty = false
 end
 
+local supportedGames = {
+	155615604,
+	2248408710,
+	189707,
+	3851622790,
+	4620170611,
+	126884695634066,
+}
+
 --// Return Game Name
 local function GetGameName()
 	local success, result = pcall(function()
@@ -283,6 +247,28 @@ local function GetGameName()
 		return "Game not found."
 	end
 end
+
+--// Return Game PlaceId
+local function GetGamePlaceId()
+	return game.PlaceId
+end
+
+--// Game Support Detection
+local gameId = GetGamePlaceId()
+local gameName = GetGameName()
+
+Notify(gameName .. " detected.")
+task.wait(1)
+
+if table.find(supportedGames, gameId) then
+	Notify(gameName .. " is supported.")
+else
+	Notify(gameName .. " is not supported.")
+end
+
+--// Debug
+print("Current PlaceId: " .. tostring(gameId))
+print("Game Name: " .. gameName)
 
 --// Load Config
 LoadConfig()
@@ -354,7 +340,7 @@ HomeSection:NewButton("Join discord", "rawr", function()
 	SaveConfig()
 	if hassetclipboard and hashttp_request then
 		setclipboard("dsc.gg/impulserbx")
-		http_request({
+		ImpulseHub_HttpRequest({
 			Url = 'http://127.0.0.1:6463/rpc?v=1',
 			Method = 'POST',
 			Headers = {
@@ -527,6 +513,10 @@ end)
 
 UniversalSection:NewButton("Jerk", "Loads a script that u can do sus stuff", function()
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/pasteisback/XorHub/refs/heads/main/Scripts/sus.luau"))()
+end)
+
+UniversalSection:NewButton("Panic", "Shutdowns the client game", function()
+	game:Shutdown()
 end)
 
 UniversalSection:NewButton("Clear Chat", "Clears chat for everyone", function()
@@ -733,7 +723,7 @@ if game.PlaceId == 155615604 then
 			end)
 		end)
 		PlayerEvents.loadchar()
-		print("Refreshed")
+		printI("Refreshed")
 		return
 	end
 
@@ -768,7 +758,7 @@ if game.PlaceId == 155615604 then
 
 	local function kill(player)
 		if typeof(player) == "string" then player = Players:FindFirstChild(player) end
-		if not player or player == LocalPlayer then return Notify("Can't kill yourself????") end
+		if not player or player == LocalPlayer then return Notify("You cannot kill urself") end
 		local gun = ReturnGun()
 
 		if gun and LocalPlayer.Team ~= player.Team then
@@ -1168,21 +1158,9 @@ if game.PlaceId == 155615604 then
 	--// Get Guns
 	PrisonSection:NewButton("Get guns", "Teleports and equips powerful prison weapons", function()
 		SaveConfig()
-		local plr = game.Players.LocalPlayer
-		local savedCFrame = plr.Character:GetPrimaryPartCFrame()
-
-		local function teleportToPickup(name)
-			local item = workspace.Prison_ITEMS.giver[name]
-			plr.Character:SetPrimaryPartCFrame(item.ITEMPICKUP.CFrame)
-			task.wait()
-			workspace.Remote.ItemHandler:InvokeServer(item.ITEMPICKUP)
-		end
-
-		teleportToPickup("Remington 870")
-		teleportToPickup("M9")
-		teleportToPickup("AK-47")
-
-		plr.Character:SetPrimaryPartCFrame(savedCFrame)
+		GetGunFromTigerAdmin("Remington 870")
+		GetGunFromTigerAdmin("M9")
+		GetGunFromTigerAdmin("AK-47")
 	end)
 
 	--// No Doors
@@ -1373,54 +1351,52 @@ if game.PlaceId == 155615604 then
 
 	PrisonSection:NewButton("Crash Server", "Crashes the server for everyone", function()
 		SaveConfig()
-
-		local player = game.Players.LocalPlayer
-		local gunName = "Remington 870"
-		local itemPickup = workspace.Prison_ITEMS.giver[gunName].ITEMPICKUP
-		local remote = workspace.Remote.ItemHandler
-
-		-- Request the weapon
-		remote:InvokeServer(itemPickup)
-
-		-- Move gun to character if it's in backpack
-		for _, tool in ipairs(player.Backpack:GetChildren()) do
-			if tool.Name == gunName then
-				tool.Parent = player.Character
-			end
+		Notify("Attemping to crash the server.")
+		local Args = {}
+		for i =1,100 do
+			Args[#Args+1] = {
+				["RayObject"] = Ray.new(Vector3.new(1253.7749, 211.21637, 2092.66943), Vector3.new(-749.737671, 13.3956146, 278.772064)),
+				["Distance"] = 796.9385986328125,
+				["Cframe"] = CFrame.new(877.76825, 217.326797, 2233.42017, 0.346436232, 0.0171507336, -0.937916756, 0, 0.999832869, 0.0182829313, 0.938073516, -0.00633386988, 0.346378326)
+			}
 		end
-
-		-- Get tool instance and unequip
-		local gunTool = player.Character:FindFirstChild(gunName)
-		if not gunTool then
-			return warn("Gun not equipped.")
-		end
-
-		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid:UnequipTools()
-		end
-
-		-- Fire overloaded bullets repeatedly
-		local function fireExploit()
-			local bulletData = {{
-				Hit = workspace.Terrain, -- Dummy target
-				Distance = 100,
-				Cframe = CFrame.new(0, 1, 1),
-				RayObject = Ray.new(Vector3.new(0.1, 0.2, 0.3), Vector3.new(0.3, 0.4, 0.5))
-			}}
-
-			game.ReplicatedStorage.ShootEvent:FireServer(bulletData, gunTool)
-		end
-
-		-- Rapid-fire loop using Stepped for max performance
-		RunService.Stepped:Connect(function()
-			for _ = 1, 5 do -- Adjustable spam count
-				fireExploit()
-			end
+		local Return = false
+		local Gun = nil
+		task.spawn(function()
+			Gun = LocalPlayer.Backpack.ChildAdded:Wait()
 		end)
+		task.spawn(function()
+			GetGunFromTigerAdmin("M9")
+		end)
+		repeat task.wait() until Gun
+		task.spawn(function()
+			repeat task.wait() until not LocalPlayer.Character:FindFirstChild("M9") and not LocalPlayer.Backpack:FindFirstChild("M9")
+			Return = true
+			return
+		end)
+		for i =1,100000 do
+			task.spawn(function()
+				game:GetService("ReplicatedStorage").ShootEvent:FireServer(Args,Gun)
+			end)
+			game:GetService("RunService").RenderStepped:Wait()
+		end
+		while task.wait(4) do
+			if Return then
+				break
+			end
+			task.spawn(function()
+				if Gun then
+					for i =1,5 do
+						task.spawn(function()
+							game:GetService("ReplicatedStorage").ShootEvent:FireServer(Args, Gun)
+						end)
+					end
+				end
+			end)
+		end
 	end)
 else
-	print("Prison Life: Not loaded.")
+	printI("Prison Life: Not loaded.")
 end
 
 if game.PlaceId == 2248408710 then --destruction simulator
@@ -1581,7 +1557,7 @@ if game.PlaceId == 2248408710 then --destruction simulator
 		end
 	end)
 else
-	print("Des Sim: Not loaded.")
+	printI("Des Sim: Not loaded.")
 end
 
 -- Exploit-heavy optimized version with full physics and reduced lag
@@ -1721,7 +1697,7 @@ if game.PlaceId == 189707 then
 		end
 	end)
 else
-	print("NAT Disaster: Not loaded.")
+	printI("NAT Disaster: Not loaded.")
 end
 
 if game.PlaceId == 3851622790 or game.PlaceId == 4620170611 then
@@ -1816,13 +1792,13 @@ if game.PlaceId == 3851622790 or game.PlaceId == 4620170611 then
 		end)
 	end
 else
-	print("Break in: Not loaded.")
+	printI("Break in: Not loaded.")
 end
 
 if game.PlaceId == 126884695634066 then
 	
 else
-	print("Grow a garden: Not loaded.")
+	printI("Grow a garden: Not loaded.")
 end
 
 --// Default to RightShift if config.bind is invalid or missing
